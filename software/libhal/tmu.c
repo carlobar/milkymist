@@ -19,17 +19,13 @@
 #include <irq.h>
 #include <board.h>
 #include <hw/interrupts.h>
-#include <hw/sysctl.h>
-#include <hw/capabilities.h>
 #include <hw/tmu.h>
 
 #include <hal/brd.h>
 #include <hal/tmu.h>
 
-#define TMU_TASKQ_SIZE 8 /* < must be a power of 2 */
+#define TMU_TASKQ_SIZE 4 /* < must be a power of 2 */
 #define TMU_TASKQ_MASK (TMU_TASKQ_SIZE-1)
-
-int tmu_ready;
 
 static struct tmu_td *queue[TMU_TASKQ_SIZE];
 static unsigned int produce;
@@ -40,11 +36,6 @@ static int cts;
 void tmu_init()
 {
 	unsigned int mask;
-	
-	if(!(CSR_CAPABILITIES & CAP_TMU)) {
-		printf("TMU: not supported by SoC, giving up.\n");
-		return;
-	}
 
 	produce = 0;
 	consume = 0;
@@ -59,8 +50,6 @@ void tmu_init()
 	irq_setmask(mask);
 
 	printf("TMU: texture mapping unit initialized\n");
-	
-	tmu_ready = 1;
 }
 
 static void tmu_start(struct tmu_td *td)
@@ -110,7 +99,7 @@ int tmu_submit_task(struct tmu_td *td)
 	unsigned int oldmask;
 
 	oldmask = irq_getmask();
-	irq_setmask(0);
+	irq_setmask(oldmask & (~IRQ_TMU));
 
 	if(level >= TMU_TASKQ_SIZE) {
 		irq_setmask(oldmask);

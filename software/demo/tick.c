@@ -20,11 +20,13 @@
 #include "rpipe.h"
 #include "cpustats.h"
 #include "memstats.h"
+#include "ui.h"
 
 void time_tick()
 {
 	rpipe_tick();
 	cpustats_tick();
 	memstats_tick();
+	ui_tick();
 }
 

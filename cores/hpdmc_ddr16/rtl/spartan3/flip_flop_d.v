@@ -1,0 +1,23 @@
+module flip_flop_d (
+	input D,
+	input clk,
+	input ce,
+	input reset,
+	input set,
+	output reg Q
+);
+
+always @(posedge clk) begin
+	if(reset)
+		Q <= 1'b0;
+	else if (set)
+		Q <= 1'b1;
+	else if (~reset & ~set & ce)
+		Q <= D;
+	else if (~reset & ~set & ~ce)
+		Q <= Q;
+	else
+		Q <= Q;
+end
+
+endmodule

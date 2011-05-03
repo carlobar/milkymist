@@ -52,14 +52,21 @@ module lm32_top (
     I_ERR_I,
     I_RTY_I,
 `endif
-`ifdef CFG_EXTERNAL_BREAK_ENABLED
-    ext_break,
-`endif
     // Data Wishbone master
     D_DAT_I,
     D_ACK_I,
     D_ERR_I,
     D_RTY_I,
+    // Debug Slave port WishboneInterface
+    DEBUG_ADR_I,
+    DEBUG_DAT_I,
+    DEBUG_SEL_I,
+    DEBUG_WE_I,
+    DEBUG_CTI_I,
+    DEBUG_BTE_I,
+    DEBUG_LOCK_I,
+    DEBUG_CYC_I,
+    DEBUG_STB_I,
     // ----- Outputs -------
 `ifdef CFG_USER_ENABLED    
     user_valid,
@@ -88,7 +95,12 @@ module lm32_top (
     D_WE_O,
     D_CTI_O,
     D_LOCK_O,
-    D_BTE_O
+    D_BTE_O,
+    // Debug Slave port WishboneInterface
+    DEBUG_ACK_O,
+    DEBUG_ERR_O,
+    DEBUG_RTY_O,
+    DEBUG_DAT_O
     );
 
 /////////////////////////////////////////////////////
@@ -119,9 +131,15 @@ input D_ACK_I;                                  // Data Wishbone interface ackno
 input D_ERR_I;                                  // Data Wishbone interface error
 input D_RTY_I;                                  // Data Wishbone interface retry
 
-`ifdef CFG_EXTERNAL_BREAK_ENABLED
-input ext_break;
-`endif
+input [`LM32_WORD_RNG] DEBUG_ADR_I;             // Debug monitor Wishbone interface address
+input [`LM32_WORD_RNG] DEBUG_DAT_I;             // Debug monitor Wishbone interface write data
+input [`LM32_BYTE_SELECT_RNG] DEBUG_SEL_I;      // Debug monitor Wishbone interface byte select
+input DEBUG_WE_I;                               // Debug monitor Wishbone interface write enable
+input [`LM32_CTYPE_RNG] DEBUG_CTI_I;            // Debug monitor Wishbone interface cycle type
+input [`LM32_BTYPE_RNG] DEBUG_BTE_I;            // Debug monitor Wishbone interface burst type
+input DEBUG_LOCK_I;                             // Debug monitor Wishbone interface locked transfer
+input DEBUG_CYC_I;                              // Debug monitor Wishbone interface cycle
+input DEBUG_STB_I;                              // Debug monitor Wishbone interface strobe
 
 /////////////////////////////////////////////////////
 // Outputs
@@ -178,6 +196,15 @@ wire   D_LOCK_O;
 output [`LM32_BTYPE_RNG] D_BTE_O;               // Data Wishbone interface burst type 
 wire   [`LM32_BTYPE_RNG] D_BTE_O;
 
+output DEBUG_ACK_O;                             // Debug monitor Wishbone ack
+wire   DEBUG_ACK_O;             
+output DEBUG_ERR_O;                             // Debug monitor Wishbone error
+wire   DEBUG_ERR_O;
+output DEBUG_RTY_O;                             // Debug monitor Wishbone retry
+wire   DEBUG_RTY_O;
+output [`LM32_WORD_RNG] DEBUG_DAT_O;            // Debug monitor Wishbone read data
+wire   [`LM32_WORD_RNG] DEBUG_DAT_O;
+  
 /////////////////////////////////////////////////////
 // Internal nets and registers 
 /////////////////////////////////////////////////////
@@ -193,7 +220,6 @@ wire jtck;
 wire jrstn;
 `endif
 
-// TODO: get the trace signals out
 `ifdef CFG_TRACE_ENABLED
 // PC trace signals
 wire [`LM32_PC_RNG] trace_pc;                   // PC to trace (address of next non-sequential instruction)
@@ -238,9 +264,6 @@ lm32_cpu cpu (
     .jtag_update           (jtag_update),
     .jtag_reg_q            (jtag_reg_q),
     .jtag_reg_addr_q       (jtag_reg_addr_q),
-`endif
-`ifdef CFG_EXTERNAL_BREAK_ENABLED
-    .ext_break             (ext_break),
 `endif
 `ifdef CFG_IWB_ENABLED
      // Instruction Wishbone master
@@ -298,17 +321,72 @@ lm32_cpu cpu (
     .D_LOCK_O              (D_LOCK_O),
     .D_BTE_O               (D_BTE_O)
     );
+
+   wire TRACE_ACK_O;
+   wire [`LM32_WORD_RNG] TRACE_DAT_O;
+`ifdef CFG_TRACE_ENABLED
+   lm32_trace trace_module (.clk_i	(clk_i),
+			    .rst_i	(rst_i),
+			    .stb_i	(DEBUG_STB_I & DEBUG_ADR_I[13]),
+			    .we_i	(DEBUG_WE_I),
+			    .sel_i	(DEBUG_SEL_I),
+			    .dat_i	(DEBUG_DAT_I),
+			    .adr_i	(DEBUG_ADR_I),
+			    .trace_pc	(trace_pc),
+			    .trace_eid	(trace_eid),
+			    .trace_eret (trace_eret),
+			    .trace_bret (trace_bret),
+			    .trace_pc_valid (trace_pc_valid),
+			    .trace_exception (trace_exception),
+			    .ack_o	(TRACE_ACK_O),
+			    .dat_o 	(TRACE_DAT_O));   
+`else
+   assign 		 TRACE_ACK_O = 0;
+   assign 		 TRACE_DAT_O = 0;   
+`endif   
+`ifdef DEBUG_ROM
+   wire ROM_ACK_O;
+   wire [`LM32_WORD_RNG] ROM_DAT_O;
+
+   assign DEBUG_ACK_O = DEBUG_ADR_I[13] ? TRACE_ACK_O : ROM_ACK_O;
+   assign DEBUG_DAT_O = DEBUG_ADR_I[13] ? TRACE_DAT_O : ROM_DAT_O;
+   
+   // ROM monitor
+   lm32_monitor debug_rom (
+			   // ----- Inputs -------
+			   .clk_i                 (clk_i),
+			   .rst_i                 (rst_i),
+			   .MON_ADR_I             (DEBUG_ADR_I),
+			   .MON_STB_I             (DEBUG_STB_I & ~DEBUG_ADR_I[13]),
+			   .MON_CYC_I             (DEBUG_CYC_I & ~DEBUG_ADR_I[13]),
+			   .MON_WE_I              (DEBUG_WE_I),
+			   .MON_SEL_I             (DEBUG_SEL_I),
+			   .MON_DAT_I             (DEBUG_DAT_I),
+			   .MON_CTI_I             (DEBUG_CTI_I),
+			   .MON_BTE_I             (DEBUG_BTE_I),
+			   .MON_LOCK_I            (DEBUG_LOCK_I),
+			   // ----- Outputs ------    
+			   .MON_RTY_O             (DEBUG_RTY_O),
+			   .MON_ERR_O             (DEBUG_ERR_O),
+			   .MON_ACK_O             (ROM_ACK_O),
+			   .MON_DAT_O             (ROM_DAT_O)
+			   );
+`endif 
    
 `ifdef CFG_JTAG_ENABLED		   
 // JTAG cores 
 jtag_cores jtag_cores (
     // ----- Inputs -----
+`ifdef INCLUDE_LM32
     .reg_d                 (jtag_reg_d),
     .reg_addr_d            (jtag_reg_addr_d),
+`endif
     // ----- Outputs -----
+`ifdef INCLUDE_LM32
     .reg_update            (jtag_update),
     .reg_q                 (jtag_reg_q),
     .reg_addr_q            (jtag_reg_addr_q),
+`endif
     .jtck                  (jtck),
     .jrstn                 (jrstn)
     );

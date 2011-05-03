@@ -4,8 +4,8 @@ ENTRY(_start)
 __DYNAMIC = 0;
 
 MEMORY {
-	flash : ORIGIN = 0x00860000, LENGTH = 0x20000    /* 128K */
-	sdram : ORIGIN = 0x44000000, LENGTH = 0x4000000  /* upper 64M of SDRAM */
+	flash : ORIGIN = 0x00000000, LENGTH = 0x1000000   /* 16M */
+	sdram : ORIGIN = 0x41000000, LENGTH = 0x1000000  /* use the upper 16M of the SDRAM */
 }
 
 SECTIONS
@@ -48,10 +48,10 @@ SECTIONS
 		*(.dynbss)
 		*(.bss .bss.* .gnu.linkonce.b.*)
 		*(COMMON)
-		. = ALIGN(4);
 		_ebss = .;
 		_end = .;
 	} > sdram
 }
 
 PROVIDE(_fstack = ORIGIN(sdram) + LENGTH(sdram) - 4);
+

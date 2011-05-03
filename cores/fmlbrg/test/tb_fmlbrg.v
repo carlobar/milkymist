@@ -1,6 +1,6 @@
 /*
  * Milkymist VJ SoC
- * Copyright (C) 2007, 2008, 2009, 2010 Sebastien Bourdeauducq
+ * Copyright (C) 2007, 2008, 2009 Sebastien Bourdeauducq
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,7 +28,6 @@ always #5 clk = ~clk;
 reg rst;
 
 reg [31:0] wb_adr_i;
-reg [2:0] wb_cti_i;
 reg [31:0] wb_dat_i;
 wire [31:0] wb_dat_o;
 reg [3:0] wb_sel_i;
@@ -37,18 +36,14 @@ reg wb_stb_i;
 reg wb_we_i;
 wire wb_ack_o;
 
-wire [26:0] fml_adr;
+wire [25:0] fml_adr;
 wire fml_stb;
 wire fml_we;
 reg fml_ack;
-wire [7:0] fml_sel;
-wire [63:0] fml_dw;
-reg [63:0] fml_dr;
+wire [3:0] fml_sel;
+wire [31:0] fml_dw;
+reg [31:0] fml_dr;
 
-reg dcb_stb;
-reg [26:0] dcb_adr;
-wire [63:0] dcb_dat;
-wire dcb_hit;
 
 /* Process FML requests */
 reg [1:0] fml_wcount;
@@ -66,7 +61,7 @@ always @(posedge clk) begin
 			$display("%t FML W addr %x data %x", $time, fml_adr, fml_dw);
 			fml_wcount <= 3;
 		end else begin
-			fml_dr = 64'hcafebabedeadbeef;
+			fml_dr = 32'hcafebabe;
 			$display("%t FML R addr %x data %x", $time, fml_adr, fml_dr);
 			fml_rcount <= 3;
 		end
@@ -84,13 +79,14 @@ always @(posedge clk) begin
 end
 
 fmlbrg #(
-	.fml_depth(27)
-) dut (
+	.fml_depth(26)
+)
+dut(
 	.sys_clk(clk),
 	.sys_rst(rst),
 	
 	.wb_adr_i(wb_adr_i),
-	.wb_cti_i(wb_cti_i),
+	.wb_cti_i(3'd0),
 	.wb_dat_i(wb_dat_i),
 	.wb_dat_o(wb_dat_o),
 	.wb_sel_i(wb_sel_i),
@@ -105,12 +101,7 @@ fmlbrg #(
 	.fml_ack(fml_ack),
 	.fml_sel(fml_sel),
 	.fml_do(fml_dw),
-	.fml_di(fml_dr),
-
-	.dcb_stb(dcb_stb),
-	.dcb_adr(dcb_adr),
-	.dcb_dat(dcb_dat),
-	.dcb_hit(dcb_hit)
+	.fml_di(fml_dr)
 );
 
 task waitclock;
@@ -126,7 +117,6 @@ input [31:0] data;
 integer i;
 begin
 	wb_adr_i = address;
-	wb_cti_i = 3'b000;
 	wb_dat_i = data;
 	wb_sel_i = 4'hf;
 	wb_cyc_i = 1'b1;
@@ -151,7 +141,6 @@ input [31:0] address;
 integer i;
 begin
 	wb_adr_i = address;
-	wb_cti_i = 3'b000;
 	wb_cyc_i = 1'b1;
 	wb_stb_i = 1'b1;
 	wb_we_i = 1'b0;
@@ -163,71 +152,6 @@ begin
 	$display("WB Read : %x=%x acked in %d clocks", address, wb_dat_o, i);
 	waitclock;
 	wb_adr_i = 32'hx;
-	wb_cyc_i = 1'b0;
-	wb_stb_i = 1'b0;
-	wb_we_i = 1'b0;
-end
-endtask
-
-task wbwriteburst;
-input [31:0] address;
-input [31:0] data;
-integer i;
-begin
-	wb_adr_i = address;
-	wb_cti_i = 3'b010;
-	wb_dat_i = data;
-	wb_sel_i = 4'hf;
-	wb_cyc_i = 1'b1;
-	wb_stb_i = 1'b1;
-	wb_we_i = 1'b1;
-	i = 0;
-	while(~wb_ack_o) begin
-		i = i+1;
-		waitclock;
-	end
-	waitclock;
-	$display("WB Write: %x=%x acked in %d clocks", address, data, i);
-	wb_dat_i = data+1;
-	waitclock;
-	wb_dat_i = data+2;
-	waitclock;
-	wb_dat_i = data+3;
-	wb_cti_i = 3'b111;
-	waitclock;
-	wb_adr_i = 32'hx;
-	wb_cti_i = 3'b000;
-	wb_cyc_i = 1'b0;
-	wb_stb_i = 1'b0;
-	wb_we_i = 1'b0;
-end
-endtask
-
-task wbreadburst;
-input [31:0] address;
-integer i;
-begin
-	wb_adr_i = address;
-	wb_cti_i = 3'b010;
-	wb_cyc_i = 1'b1;
-	wb_stb_i = 1'b1;
-	wb_we_i = 1'b0;
-	i = 0;
-	while(~wb_ack_o) begin
-		i = i+1;
-		waitclock;
-	end
-	$display("WB Read : %x=%x acked in %d clocks", address, wb_dat_o, i);
-	waitclock;
-	$display("read burst(1): %x", wb_dat_o);
-	waitclock;
-	$display("read burst(2): %x", wb_dat_o);
-	waitclock;
-	wb_cti_i = 3'b111;
-	$display("read burst(3): %x", wb_dat_o);
-	waitclock;
-	wb_adr_i = 32'hx;
-	wb_cti_i = 3'b000;
 	wb_cyc_i = 1'b0;
 	wb_stb_i = 1'b0;
 	wb_we_i = 1'b0;
@@ -246,9 +170,6 @@ always begin
 	wb_cyc_i = 1'b0;
 	wb_stb_i = 1'b0;
 	wb_we_i = 1'b0;
-
-	dcb_stb = 1'b0;
-	dcb_adr = 27'd0;
 	
 	waitclock;
 	
@@ -256,42 +177,21 @@ always begin
 	
 	waitclock;
 	
-	$display("Testing: read miss");
-	wbread(27'h0);
+	//$display("Testing: read miss");
+	//wbread(26'h0);
 	$display("Testing: write hit");
-	wbwrite(27'h0, 32'h12345678);
-	wbread(27'h0);
+	wbwrite(26'h0, 32'h12345678);
+	wbread(26'h0);
 	$display("Testing: read miss on a dirty line");
-	wbread(27'h10000);
+	wbread(26'h10000);
 	
 	$display("Testing: read hit");
-	wbread(27'h10004);
+	wbread(26'h10004);
 	
 	$display("Testing: write miss");
-	wbwrite(27'h0, 32'habadface);
-	wbread(27'h0);
-	wbread(27'h4);
-	
-	$display("Testing: read burst");
-	wbreadburst(27'h40);
-	
-	$display("Testing: write burst");
-	wbwriteburst(27'h40, 32'hcafe0000);
-	
-	$display("Testing: read burst");
-	wbreadburst(27'h40);
-
-	$display("Testing: DCB miss");
-	dcb_adr = 27'hfebabe;
-	dcb_stb = 1'b1;
-	waitclock;
-	$display("Result: hit=%b dat=%x", dcb_hit, dcb_dat);
-
-	$display("Testing: DCB hit");
-	dcb_adr = 27'h0;
-	dcb_stb = 1'b1;
-	waitclock;
-	$display("Result: hit=%b dat=%x", dcb_hit, dcb_dat);
+	wbwrite(26'h0, 32'habadface);
+	wbread(26'h0);
+	wbread(26'h4);
 	
 	$finish;
 end

@@ -22,7 +22,6 @@
 #include <hal/snd.h>
 #include <hal/pfpu.h>
 #include <hal/time.h>
-#include <hal/dmx.h>
 
 #include "analyzer.h"
 #include "eval.h"
@@ -31,7 +30,7 @@
 #include "apipe.h"
 
 /* Also used as frame rate limiter */
-#define NSAMPLES (48000/25)
+#define NSAMPLES (48000/30)
 
 static short audiobuffer1[NSAMPLES*2];
 static short audiobuffer2[NSAMPLES*2];
@@ -48,6 +47,8 @@ static struct rpipe_frame frame1 __attribute__((aligned(8)));
 static struct rpipe_frame frame2 __attribute__((aligned(8)));
 static volatile int frame1_free;
 static volatile int frame2_free;
+
+static unsigned int all_frames;
 
 static struct rpipe_frame *alloc_rpipe_frame()
 {
@@ -72,15 +73,16 @@ static void free_rpipe_frame(struct rpipe_frame *rpipe_frame)
 void apipe_init()
 {
 	run_analyzer_bottom_half = 0;
-	peak_bass = 1200000/5;
-	peak_mid =  1000000/5;
-	peak_treb =  900000/5;
+	peak_bass = 1740164;
+	peak_mid = 1062625;
+	peak_treb = 928140;
 	bass_att = 0.0;
 	mid_att = 0.0;
 	treb_att = 0.0;
 	eval_ready = 1;
 	frame1_free = 1;
 	frame2_free = 1;
+	all_frames = 0;
 	printf("API: analysis pipeline ready\n");
 }
 
@@ -95,11 +97,8 @@ static void apipe_snd_callback(short *buffer, void *user)
 	run_analyzer_bottom_half = 1;
 }
 
-static float brightness_error;
-
 void apipe_start()
 {
-	brightness_error = 0.0;
 	snd_record_empty();
 	snd_record_refill(audiobuffer1);
 	snd_record_refill(audiobuffer2);
@@ -143,15 +142,25 @@ static void pvv_callback(struct pfpu_td *td)
 static void pfv_callback(struct pfpu_td *td)
 {
 	struct rpipe_frame *rpipe_frame;
-	int ibrightness;
+	int brightness256, brightness64, frame_mod;
+	float decay;
 
 	rpipe_frame = (struct rpipe_frame *)td->user;
 
-	brightness_error += eval_read_pfv(pfv_decay);
-	ibrightness = 64.0*brightness_error;
-	brightness_error -= (float)ibrightness/64.0;
-	if(ibrightness > 64) ibrightness = 64;
-	rpipe_frame->brightness = ibrightness - 1;
+	decay = eval_read_pfv(pfv_decay);
+	brightness256 = 255.0*decay+3.5;
+	brightness64 = (brightness256 >> 2)-1;
+	brightness256 &= 3;
+	frame_mod = rpipe_frame->framenr & 3;
+	if((brightness256 == 1) && (frame_mod == 0))
+		brightness64++;
+	if((brightness256 == 2) && ((frame_mod == 0)||(frame_mod == 2)))
+		brightness64++;
+	if((brightness256 == 3) && (frame_mod != 3))
+		brightness64++;
+	if(brightness64 < 0) brightness64 = 0;
+	if(brightness64 > 63) brightness64 = 63;
+	rpipe_frame->brightness = brightness64;
 
 	rpipe_frame->wave_mode = eval_read_pfv(pfv_wave_mode);
 	rpipe_frame->wave_scale = eval_read_pfv(pfv_wave_scale);
@@ -195,11 +204,6 @@ static void pfv_callback(struct pfpu_td *td)
 	rpipe_frame->vecho_zoom = eval_read_pfv(pfv_video_echo_zoom);
 	rpipe_frame->vecho_orientation = eval_read_pfv(pfv_video_echo_orientation);
 
-	rpipe_frame->dmx1 = eval_read_pfv(pfv_dmx1);
-	rpipe_frame->dmx2 = eval_read_pfv(pfv_dmx2);
-	rpipe_frame->dmx3 = eval_read_pfv(pfv_dmx3);
-	rpipe_frame->dmx4 = eval_read_pfv(pfv_dmx4);
-
 	eval_transfer_pvv_regs();
 	eval_pvv_fill_td(&pfpu_td, &rpipe_frame->vertices[0][0], pvv_callback, rpipe_frame);
 	pfpu_submit_task(&pfpu_td);
@@ -233,16 +237,19 @@ static void analyzer_bottom_half()
 	mid = analyzer_get_mid(&analyzer);
 	treb = analyzer_get_treb(&analyzer);
 	// TODO: appropriate scaling
-	fbass = (float)bass/(float)peak_bass;
-	fmid = (float)mid/(float)peak_mid;
-	ftreb = (float)treb/(float)peak_treb;
+	if(bass > peak_bass) peak_bass = bass;
+	if(mid > peak_mid) peak_mid = mid;
+	if(treb > peak_treb) peak_treb = treb;
+	fbass = 5.0f*(float)bass/(float)peak_bass;
+	fmid = 5.0f*(float)mid/(float)peak_mid;
+	ftreb = 5.0f*(float)treb/(float)peak_treb;
 
 	treb_att = 0.6f*treb_att + 0.4f*ftreb;
 	mid_att = 0.6f*mid_att + 0.4f*fmid;
 	bass_att = 0.6f*bass_att + 0.4f*fbass;
 
 	time_get(&ts);
-	time = (float)ts.sec + (float)ts.usec/1000000.0;
+	time = (float)ts.sec + (float)ts.usec/1000000.0f;
 
 	eval_reinit_all_pfv();
 	
@@ -254,13 +261,9 @@ static void analyzer_bottom_half()
 	eval_write_pfv(pfv_mid_att, mid_att);
 	eval_write_pfv(pfv_treb_att, treb_att);
 
-	eval_write_pfv(pfv_idmx1, ((float)dmx_get(0))/255.0);
-	eval_write_pfv(pfv_idmx2, ((float)dmx_get(1))/255.0);
-	eval_write_pfv(pfv_idmx3, ((float)dmx_get(2))/255.0);
-	eval_write_pfv(pfv_idmx4, ((float)dmx_get(3))/255.0);
-
 	rpipe_frame->time = time;
 	rpipe_frame->treb = ftreb;
+	rpipe_frame->framenr = all_frames++;
 
 	eval_pfv_fill_td(&pfpu_td, pfv_callback, rpipe_frame);
 	pfpu_submit_task(&pfpu_td);

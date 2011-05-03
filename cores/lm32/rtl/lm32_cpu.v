@@ -91,9 +91,6 @@ module lm32_cpu (
     jtag_reg_q,
     jtag_reg_addr_q,
 `endif
-`ifdef CFG_EXTERNAL_BREAK_ENABLED
-    ext_break,
-`endif
 `ifdef CFG_IWB_ENABLED
     // Instruction Wishbone master
     I_DAT_I,
@@ -242,10 +239,6 @@ input [`LM32_WORD_RNG] D_DAT_I;                 // Data Wishbone interface read 
 input D_ACK_I;                                  // Data Wishbone interface acknowledgement
 input D_ERR_I;                                  // Data Wishbone interface error
 input D_RTY_I;                                  // Data Wishbone interface retry
-
-`ifdef CFG_EXTERNAL_BREAK_ENABLED
-input ext_break;
-`endif
 
 /////////////////////////////////////////////////////
 // Outputs
@@ -736,10 +729,6 @@ wire system_call_exception;                     // Indicates if a system call ex
 
 `ifdef CFG_BUS_ERRORS_ENABLED
 reg data_bus_error_seen;                        // Indicates if a data bus error was seen
-`endif
-
-`ifdef CFG_EXTERNAL_BREAK_ENABLED
-reg ext_break_r;
 `endif
 
 /////////////////////////////////////////////////////
@@ -1284,44 +1273,70 @@ lm32_debug #(
    /*----------------------------------------------------------------------
     Register file instantiation as Pseudo-Dual Port EBRs.
     ----------------------------------------------------------------------*/
-   // Modified by GSI: removed non-portable RAM instantiation
-   lm32_dp_ram
+   pmi_ram_dp
      #(
        // ----- Parameters -----
-       .addr_depth(1<<5),
-       .addr_width(5),
-       .data_width(32)
+       .pmi_wr_addr_depth(1<<5),
+       .pmi_wr_addr_width(5),
+       .pmi_wr_data_width(32),
+       .pmi_rd_addr_depth(1<<5),
+       .pmi_rd_addr_width(5),
+       .pmi_rd_data_width(32),
+       .pmi_regmode("noreg"),
+       .pmi_gsr("enable"),
+       .pmi_resetmode("sync"),
+       .pmi_init_file("none"),
+       .pmi_init_file_format("binary"),
+       .pmi_family(`LATTICE_FAMILY),
+       .module_type("pmi_ram_dp")
        )
    reg_0
      (
       // ----- Inputs -----
-      .clk_i	(clk_i),
-      .rst_i	(rst_i), 
-      .we_i	(reg_write_enable_q_w),
-      .wdata_i	(w_result),
-      .waddr_i	(write_idx_w),
-      .raddr_i	(instruction_f[25:21]),
+      .Data(w_result),
+      .WrAddress(write_idx_w),
+      .RdAddress(instruction_f[25:21]),
+      .WrClock(clk_i),
+      .RdClock(clk_i),
+      .WrClockEn(`TRUE),
+      .RdClockEn(`TRUE),
+      .WE(reg_write_enable_q_w),
+      .Reset(rst_i), 
       // ----- Outputs -----
-      .rdata_o	(regfile_data_0)
+      .Q(regfile_data_0)
       );
 
-   lm32_dp_ram
+   pmi_ram_dp
      #(
-       .addr_depth(1<<5),
-       .addr_width(5),
-       .data_width(32)
+       // ----- Parameters -----
+       .pmi_wr_addr_depth(1<<5),
+       .pmi_wr_addr_width(5),
+       .pmi_wr_data_width(32),
+       .pmi_rd_addr_depth(1<<5),
+       .pmi_rd_addr_width(5),
+       .pmi_rd_data_width(32),
+       .pmi_regmode("noreg"),
+       .pmi_gsr("enable"),
+       .pmi_resetmode("sync"),
+       .pmi_init_file("none"),
+       .pmi_init_file_format("binary"),
+       .pmi_family(`LATTICE_FAMILY),
+       .module_type("pmi_ram_dp")
        )
    reg_1
      (
       // ----- Inputs -----
-      .clk_i	(clk_i),
-      .rst_i	(rst_i), 
-      .we_i	(reg_write_enable_q_w),
-      .wdata_i	(w_result),
-      .waddr_i	(write_idx_w),
-      .raddr_i	(instruction_f[20:16]),
+      .Data(w_result),
+      .WrAddress(write_idx_w),
+      .RdAddress(instruction_f[20:16]),
+      .WrClock(clk_i),
+      .RdClock(clk_i),
+      .WrClockEn(`TRUE),
+      .RdClockEn(`TRUE),
+      .WE(reg_write_enable_q_w),
+      .Reset(rst_i), 
       // ----- Outputs -----
-      .rdata_o	(regfile_data_1)
+      .Q(regfile_data_1)
       );
 `endif
 
@@ -1668,9 +1683,6 @@ assign breakpoint_exception =    (   (   (break_x == `TRUE)
 `ifdef CFG_JTAG_ENABLED
                               || (jtag_break == `TRUE)
 `endif
-`ifdef CFG_EXTERNAL_BREAK_ENABLED
-                              || (ext_break_r == `TRUE)
-`endif
                               ;
 `endif
 
@@ -1808,9 +1820,7 @@ assign stall_d =   (stall_x == `TRUE)
                    ) 
 		|| (   (   (eret_d == `TRUE)
 			|| (scall_d == `TRUE)
-`ifdef CFG_BUS_ERRORS_ENABLED
 			|| (bus_error_d == `TRUE)
-`endif
 		       )
 		    && (   (load_q_x == `TRUE)
 			|| (load_q_m == `TRUE)
@@ -1874,9 +1884,7 @@ assign stall_m =    (stall_wb_load == `TRUE)
 			  exception has occured. This stall will ensure that D_CYC_O and 
 			  store_m will both be low for one cycle.
 			  */
-`ifdef CFG_INTERRUPTS_ENABLED
 		         || ((store_x == `TRUE) && (interrupt_exception == `TRUE))
-`endif
                          || (load_m == `TRUE)
                          || (load_x == `TRUE)
                         ) 
@@ -2036,29 +2044,15 @@ assign cfg2 = {
    
 // Cache flush
 `ifdef CFG_ICACHE_ENABLED
-assign iflush = (   (csr_write_enable_d == `TRUE) 
-                 && (csr_d == `LM32_CSR_ICC)
-                 && (stall_d == `FALSE)
-                 && (kill_d == `FALSE)
-                 && (valid_d == `TRUE))
-// Added by GSI: needed to flush cache after loading firmware per JTAG
-`ifdef CFG_HW_DEBUG_ENABLED
-             ||
-                (   (jtag_csr_write_enable == `TRUE)
-		 && (jtag_csr == `LM32_CSR_ICC))
-`endif
-		 ;
+assign iflush =    (csr_write_enable_d == `TRUE) 
+                && (csr_d == `LM32_CSR_ICC)
+                && (stall_d == `FALSE)
+                && (kill_d == `FALSE)
+                && (valid_d == `TRUE);
 `endif 
 `ifdef CFG_DCACHE_ENABLED
-assign dflush_x = (   (csr_write_enable_q_x == `TRUE) 
-                   && (csr_x == `LM32_CSR_DCC))
-// Added by GSI: needed to flush cache after loading firmware per JTAG
-`ifdef CFG_HW_DEBUG_ENABLED
-               ||
-                  (   (jtag_csr_write_enable == `TRUE)
-		   && (jtag_csr == `LM32_CSR_DCC))
-`endif
-		   ;
+assign dflush_x =  (csr_write_enable_q_x == `TRUE) 
+                && (csr_x == `LM32_CSR_DCC);
 `endif 
 
 // Extract CSR index
@@ -2158,21 +2152,6 @@ begin
 end
 `endif
  
-`ifdef CFG_EXTERNAL_BREAK_ENABLED
-always @(posedge clk_i `CFG_RESET_SENSITIVITY)
-begin
-    if (rst_i == `TRUE)
-        ext_break_r <= `FALSE;
-    else
-    begin
-		if (ext_break == `TRUE)
-			ext_break_r <= `TRUE;
-        if (debug_exception_q_w == `TRUE)
-            ext_break_r <= `FALSE;
-    end
-end
-`endif
-
 // Valid bits to indicate whether an instruction in a partcular pipeline stage is valid or not  
 
 `ifdef CFG_ICACHE_ENABLED
@@ -2275,7 +2254,7 @@ begin
         operand_0_x <= {`LM32_WORD_WIDTH{1'b0}};
         operand_1_x <= {`LM32_WORD_WIDTH{1'b0}};
         store_operand_x <= {`LM32_WORD_WIDTH{1'b0}};
-        branch_target_x <= {`LM32_PC_WIDTH{1'b0}};        
+        branch_target_x <= {`LM32_WORD_WIDTH{1'b0}};        
         x_result_sel_csr_x <= `FALSE;
 `ifdef LM32_MC_ARITHMETIC_ENABLED
         x_result_sel_mc_arith_x <= `FALSE;
@@ -2336,7 +2315,7 @@ begin
 `endif
         csr_write_enable_x <= `FALSE;
         operand_m <= {`LM32_WORD_WIDTH{1'b0}};
-        branch_target_m <= {`LM32_PC_WIDTH{1'b0}};
+        branch_target_m <= {`LM32_WORD_WIDTH{1'b0}};
         m_result_sel_compare_m <= `FALSE;
 `ifdef CFG_PL_BARREL_SHIFT_ENABLED
         m_result_sel_shift_m <= `FALSE;
@@ -2660,7 +2639,7 @@ begin
         registers[28] <= {`LM32_WORD_WIDTH{1'b0}};
         registers[29] <= {`LM32_WORD_WIDTH{1'b0}};
         registers[30] <= {`LM32_WORD_WIDTH{1'b0}};
-        registers[31] <= {`LM32_WORD_WIDTH{1'b0}};
+        registers[31] <= {`LM32_WORD_WIDTH{1'b0}}; 
         end
     else begin
         if (reg_write_enable_q_w == `TRUE)

@@ -33,7 +33,7 @@ _reset_handler:
 	mvhi    r1, hi(_reset_handler)
 	ori     r1, r1, lo(_reset_handler)
 	wcsr    EBA, r1
-	bi      _crt0
+	calli   _crt0
 	nop
 	nop
 
@@ -119,7 +119,7 @@ _crt0:
 	mvi     r1, 0
 	mvi     r2, 0
 	mvi     r3, 0
-	bi      main
+	calli   main
 
 .save_all:
 	addi    sp, sp, -56

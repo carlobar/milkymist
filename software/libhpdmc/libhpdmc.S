@@ -1,5 +1,5 @@
 /*
- * libHPDMC - SDRAM initialization runtime for Milkymist SoC bootloaders
+ * libHPDMC - SDRAM initialization runtime for Milkymist bootloaders
  * Copyright (C) 2010 Sebastien Bourdeauducq
  *
  * This library is free software; you can redistribute it and/or
@@ -25,6 +25,8 @@
 #include <version.h>
 
 #include "libhpdmc.h"
+#include "libhpdmc_timing.h"
+
 
 /* evaluate feature dependencies */
 #if defined(FEAT_MANUAL_CALIBRATION) && defined(FEAT_NO_OUTPUT)
@@ -37,7 +39,8 @@
 
 /*
  * GLOBAL VARIABLES
- * r24: DQS delay
+ * r25: Input delay
+ * r24: DQS phase
  * r23: return address
  */
 
@@ -58,68 +61,64 @@
 .endm
 
 .section .text, "ax", @progbits
-.global _sdram_init
+.global _sdram_init 
+.global print 
+.global printint
 _sdram_init:
+
 	mv	r23, ra
-	PRINT(banner)
+/*	PRINT(banner)
 	PRINT(version)
 	PRINT(nl)
 	PRINT(nl)
+*/
+	/*Set mode bypass*/
+	mvhi	r2, hi(CSR_HPDMC_SYSTEM)
+	ori	r2, r2, lo(CSR_HPDMC_SYSTEM)
+	mvu	r3, (HPDMC_SYSTEM_BYPASS)
+	sw 	(r2+0), r3	
+
+	/* wait for the PLLs to lock */
+	mvhi	r1, hi(CSR_HPDMC_IODELAY)
+	ori	r1, r1, lo(CSR_HPDMC_IODELAY)
+	mvu	r3, (HPDMC_PLL1_LOCKED|HPDMC_PLL2_LOCKED)
+wait_pll:
+	lw	r2, (r1+0)
+	and	r2, r2, r3
+	bne	r2, r3, wait_pll
+	
+
+
+	/* set IDEHPDMC_DQSDELAY_RDYLAY=0, wait for DQS generator ready */
+
+	mvhi	r2, hi(HPDMC_IDELAY_RST)
+	ori	r2, r2, lo(HPDMC_IDELAY_RST)
+//	mvu	r2, (HPDMC_IDELAY_RST)
+	sw	(r1+0), r2
+wait_dqs_start:
+	lw	r2, (r1+0)
+	andi	r2, r2, (HPDMC_DQSDELAY_RDY)
+	be	r2, r0, wait_dqs_start
+	xor	r25, r25, r25
+	xor	r24, r24, r24
 
 	/* send init sequence */
 	bi send_init
 send_init_return:
-	PRINT(seqcomplete)
-
-	/* calibrate and set IDELAY=0 */
-	mvhi	r1, hi(CSR_HPDMC_IODELAY)
-	ori	r1, r1, lo(CSR_HPDMC_IODELAY)
-	mvu	r2, (HPDMC_IDELAY_CAL)
-	sw	(r1+0), r2
-	/* the IODELAYs require some signal edges during calibration... 
-	 * make dummy memory transfers to keep them happy.
-	 */
-	mvu	r3, 500
-	mvhi	r4, hi(0xffffffff)
-	ori	r4, r4, lo(0xffffffff)
-dummyxfer:
-	mvhi	r1, hi(0xc8000000) /* L2 writeback/invalidate */
-	sw	(r1+0), r0
-	mvhi	r1, hi(0xc0000000) /* L2 fetch/make dirty */
-	sw	(r1+0), r0
-	mvhi	r1, hi(0xc8000000) /* L2 writeback/invalidate */
-	sw	(r1+0), r0
-	mvhi	r1, hi(0xc0000000) /* L2 fetch/make dirty */
-	sw	(r1+0), r4
-	addi	r3, r3, -1
-	bne	r3, r0, dummyxfer
-	/* now reset IODELAYs */
-	mvhi	r1, hi(CSR_HPDMC_IODELAY)
-	ori	r1, r1, lo(CSR_HPDMC_IODELAY)
-	mvu	r2, (HPDMC_IDELAY_RST)
-	sw	(r1+0), r2
-	mvu	r1, 200
-	calli	delay
-	mvhi	r1, hi(CSR_HPDMC_IODELAY)
-	ori	r1, r1, lo(CSR_HPDMC_IODELAY)
-	sw	(r1+0), r2
-	mvu	r1, 200
-	calli	delay
-
-	xor	r24, r24, r24
+	//PRINT(seqcomplete)
 
 #ifdef FEAT_PBC_MANUAL_CALIBRATION
-	/* if BTN3 is pushed, go into debug/manual mode */
+	/* if PBC is pushed, go into debug/manual mode */
 	mvhi	r1, hi(CSR_GPIO_IN)
 	ori	r1, r1, lo(CSR_GPIO_IN)
 	lw	r2, (r1+0)
-	andi	r2, r2, (GPIO_BTN3)
+	andi	r2, r2, (GPIO_PBC)
 	bne	r2, r0, mancal
 #endif
 
 	bi	autocalibrate
 autocalibrate_fail_return:
-	PRINT(autocalfail)
+	//PRINT(autocalfail)
 #ifdef FEAT_MANUAL_CALIBRATION
 	bi	mancal /* does not return */
 #endif
@@ -129,10 +128,10 @@ autocalibrate_fail_return:
 	bi	autocalibrate_fail_return
 
 autocalibrate_success_return:
-	PRINT(autocalok)
+	//PRINT(autocalok)
 	
 	/* small memory test */
-	mvi	r1, 0
+	mv	r1, r0
 	xor	r2, r2, r2
 	calli	memtest
 	be	r1, r0, memtest_fail
@@ -143,7 +142,7 @@ autocalibrate_success_return:
 memtest_fail:
 	PRINT(testfailmsg)
 #ifdef FEAT_MANUAL_CALIBRATION
-	bi	mancal /* does not return */
+	bi	config//mancal /* does not return *///
 #endif
 #ifdef FEAT_RETURN_STATUS
 	RETURN(LIBHPDMC_MEMTEST_FAILED)
@@ -159,54 +158,113 @@ send_init:
 	mvu	r3, (HPDMC_SYSTEM_BYPASS|HPDMC_SYSTEM_RESET|HPDMC_SYSTEM_CKE)
 	sw 	(r2+0), r3
 	
-	ori	r1, r0, 2
+	ori	r1, r0, 1
 	calli	delay
 	
 	mvhi	r2, hi(CSR_HPDMC_BYPASS)
 	ori	r2, r2, lo(CSR_HPDMC_BYPASS)
 	
-	/* Precharge All */
+	/* Precharge All ------ No 7*/
 	mvu	r3, 0x400B
 	sw 	(r2+0), r3
-	mvu	r1, 2
+	mvu	r1, 1
 	calli	delay
 	
-	/* Load Extended Mode Register */
+	/* NOP cmd	-------- No 8*/
+	mvu	r3, 0x8
+	sw 	(r2+0), r3
+	mvu	r1, 1
+	calli	delay
+
+	/* Load Extended Mode Register No 9*/
 	mvhi	r3, 0x2
 	ori	r3, r3, 0x000F
 	sw 	(r2+0), r3
-	mvu	r1, 2
+	mvu	r1, 1
 	calli	delay
 	
-	/* Load Mode Register */
-	mvu	r3, 0x123F
+	/* NOP cmd	-------- No 10*/
+	mvu	r3, 0x8
 	sw 	(r2+0), r3
-	mvu	r1, 200
+	mvu	r1, 1
 	calli	delay
+
+
+
+	/* Load Mode Register ------- No 11*/
+	mvu	r3, 0x121F
+	sw 	(r2+0), r3
+	mvu	r1, 100
+	calli	delay
+
+
+	/* NOP cmd	-------- No 12*/
+	mvu	r3, 0x8
+	sw 	(r2+0), r3
+	mvu	r1, 1
+	calli	delay
+
+
 	
-	/* Precharge All */
+	/* Precharge All ---- No 13*/
 	mvu	r3, 0x400B
 	sw 	(r2+0), r3
-	mvu	r1, 2
+	mvu	r1, 1
 	calli	delay
 	
-	/* Auto Refresh */
+
+	/* NOP cmd	-------- No 14*/
+	mvu	r3, 0x8
+	sw 	(r2+0), r3
+	mvu	r1, 1
+	calli	delay
+
+	/* Auto Refresh ---- 15*/
 	mvu	r3, 0xD
 	sw 	(r2+0), r3
-	mvu	r1, 8
+	mvu	r1, 4
 	calli	delay
 	
-	/* Auto Refresh */
+
+	/* NOP cmd	-------- No 16*/
+	mvu	r3, 0x8
+	sw 	(r2+0), r3
+	mvu	r1, 1
+	calli	delay
+
+	/* Auto Refresh  ---- 17*/
 	mvu	r3, 0xD
 	sw 	(r2+0), r3
-	mvu	r1, 8
+	mvu	r1, 4
 	calli	delay
 	
-	/* Load Mode Register, Enable DLL */
-	mvu	r3, 0x23F
+	/* NOP cmd	-------- No 18*/
+	mvu	r3, 0x8
 	sw 	(r2+0), r3
-	mvu	r1, 200
+	mvu	r1, 1
 	calli	delay
+
+	/* Load Mode Register, Enable DLL --- 19*/
+	mvu	r3, 0x021F
+	sw 	(r2+0), r3
+	mvu	r1, 100
+	calli	delay
+
+	/* NOP cmd	-------- No 20*/
+	mvu	r3, 0x8
+	sw 	(r2+0), r3
+	mvu	r1, 1
+	calli	delay
+
+	/*set timers*/
+	mvhi	r2, hi(CSR_HPDMC_TIMING)
+	ori	r2, r2, lo(CSR_HPDMC_TIMING)
+	mvhi	r3, hi(HPDMC_TIMING)
+	ori	r3, r3, lo(HPDMC_TIMING)
+	sw	(r2+0), r3
+	
+//	sli	r10
+
 
 	/* All done, get the controller into gear */
 	mvhi	r2, hi(CSR_HPDMC_SYSTEM)
@@ -216,24 +274,35 @@ send_init:
 
 	bi	send_init_return
 
+/*
+ * TODO: proper dynamic autocalibration:
+ * scan IDELAY/DQS and memtest,
+ * then place in the middle of the working zone.
+ */
 /* clobbers: r1, r2, r3, r4 */
 autocalibrate:
+	mvu	r24, 000 /* DQS phase, change this number for your board */
 	mvhi	r1, hi(CSR_HPDMC_IODELAY)
 	ori	r1, r1, lo(CSR_HPDMC_IODELAY)
-	mvu	r24, 19 /* input delay, change this number for your board */
 	xor	r2, r2, r2
-	mvu	r3, (HPDMC_IDELAY_CE|HPDMC_IDELAY_INC)
-	be	r2, r24, idelay_loop_end
-idelay_loop:
+	mvu	r3, (HPDMC_DQSDELAY_CE|HPDMC_DQSDELAY_INC)
+	be	r2, r24, dqs_loop_end
+dqs_loop:
 	sw	(r1+0), r3
+dqs_loop_wait:
+	lw	r4, (r1+0)
+	andi	r4, r4, (HPDMC_DQSDELAY_RDY)
+	be	r4, r0, dqs_loop_wait
 	addi	r2, r2, 1
-	bne	r2, r24, idelay_loop
-idelay_loop_end:
+	bne	r2, r24, dqs_loop
+dqs_loop_end:
 	bi	autocalibrate_success_return
 
 #ifdef FEAT_MANUAL_CALIBRATION
 /* does not return */
 mancal:
+
+
 	/* enable VGA out */
 	mvhi	r1, hi(CSR_VGA_BASEADDRESS)
 	ori	r1, r1, lo(CSR_VGA_BASEADDRESS)
@@ -243,7 +312,13 @@ mancal:
 	ori	r1, r1, lo(CSR_VGA_RESET)
 	sw 	(r1+0), r0
 mancal_loop:
+////////////////////////
+//////////////////////////////////////
+////////////////////////////////////
 	PRINT(manualkeys)
+	mv	r1, r25
+	calli	printint
+	PRINT(spacer)
 	mv	r1, r24
 	calli	printint
 	PRINT(nl)
@@ -252,32 +327,56 @@ mancal_loop:
 	be	r1, r2, inc_input_delay
 	mvu	r2, 'd'
 	be	r1, r2, dec_input_delay
-	mvu	r2, 't'
+	mvu	r2, 'U'
+	be	r1, r2, inc_dqs_phase
+	mvu	r2, 'D'
+	be	r1, r2, dec_dqs_phase
+	mvu	r2, 't'10
 	be	r1, r2, small_test
 	mvu	r2, 'T'
 	be	r1, r2, big_test
-	mvu	r2, 'c'
-	be	r1, r2, iodelay_calibrate
-	mvu	r2, 'r'
-	be	r1, r2, iodelay_reset
 	mvu	r2, 'p'
 	be	r1, r2, disp_pattern
 	mvu	r2, 'b'
 	be	r1, r2, boot
 	bi mancal_loop
 inc_input_delay:
-	addi	r24, r24, 1
+	mvu	r1, 1
+	be	r25, r1, mancal_loop
+	addi	r25, r25, 001
 	mvhi	r1, hi(CSR_HPDMC_IODELAY)
 	ori	r1, r1, lo(CSR_HPDMC_IODELAY)
 	mvu	r2, (HPDMC_IDELAY_CE|HPDMC_IDELAY_INC)
 	sw	(r1+0), r2
 	bi	mancal_loop
 dec_input_delay:
-	addi	r24, r24, -1
+	be	r25, r0, mancal_loop
+	addi	r25, r25, -1
 	mvhi	r1, hi(CSR_HPDMC_IODELAY)
 	ori	r1, r1, lo(CSR_HPDMC_IODELAY)
 	mvu	r2, (HPDMC_IDELAY_CE)
 	sw	(r1+0), r2
+	bi	mancal_loop
+inc_dqs_phase:
+	mvu	r1, 255
+	be	r24, r1, mancal_loop
+	addi	r24, r24, 1
+	mvhi	r1, hi(CSR_HPDMC_IODELAY)
+	ori	r1, r1, lo(CSR_HPDMC_IODELAY)
+	mvu	r2, (HPDMC_DQSDELAY_CE|HPDMC_DQSDELAY_INC)
+	sw	(r1+0), r2
+	bi	wait_dqs
+dec_dqs_phase:
+	be	r24, r0, mancal_loop
+	addi	r24, r24, -1
+	mvhi	r1, hi(CSR_HPDMC_IODELAY)
+	ori	r1, r1, lo(CSR_HPDMC_IODELAY)
+	mvu	r2, (HPDMC_DQSDELAY_CE)
+	sw	(r1+0), r2
+wait_dqs:
+	lw	r2, (r1+0)
+	andi	r2, r2, HPDMC_DQSDELAY_RDY
+	be	r2, r0, wait_dqs
 	bi	mancal_loop
 small_test:
 	xor	r1, r1, r1
@@ -294,19 +393,6 @@ after_test:
 	bi	mancal_loop
 print_test_fail:
 	PRINT(memtestfailed)
-	bi	mancal_loop
-iodelay_calibrate:
-	mvhi	r1, hi(CSR_HPDMC_IODELAY)
-	ori	r1, r1, lo(CSR_HPDMC_IODELAY)
-	mvu	r2, (HPDMC_IDELAY_CAL)
-	sw	(r1+0), r2
-	bi	mancal_loop
-iodelay_reset:
-	mvhi	r1, hi(CSR_HPDMC_IODELAY)
-	ori	r1, r1, lo(CSR_HPDMC_IODELAY)
-	mvu	r2, (HPDMC_IDELAY_RST)
-	sw	(r1+0), r2
-	xor	r25, r25, r25
 	bi	mancal_loop
 disp_pattern:
 	mvu	r1, 640
@@ -338,6 +424,131 @@ boot:
 	sw 	(r1+0), r2
 	RETURN(LIBHPDMC_SUCCESS)
 
+//////////////////////////////////////////////////////////////////////////
+// recursive configuration
+config:
+	mvhi	r15, hi(0x00000000)		//dqs counter
+	ori	r15, r15, lo(0x00000000)	
+
+	mvhi	r16, hi(0x00000000)		//delay counter
+	ori	r16, r16, lo(0x00000000)	
+
+	mvhi	r10, hi(0x00000100)		//max dqs
+	ori	r10, r10, lo(0x00000100)
+	
+	mvhi	r11, hi(0x00000096)		//max delay
+	ori	r11, r11, lo(0x00000096)	
+
+	mvhi	r12, hi(0x00000000)		// increment or decrement
+	ori	r12, r12, lo(0x00000000)	
+
+	mvhi	r13, hi(0x00000001)		
+	ori	r13, r13, lo(0x00000001)
+
+
+	mvhi r19, hi(0x41000000)
+	ori  r19, r19, lo(0x41000000)
+	mvhi r18, hi(0x53334558)
+	ori  r18, r18, lo(0x53334558)
+
+	sw   (r19+4), r18
+	sw   (r19+0), r11
+	lw   r18,(r19+4)
+	lw   r17,(r19+0)
+
+/*	mvhi r19, hi(0x80001004)
+	ori  r19, r19, lo(0x80001004)
+	sw   (r19+0), r18
+	mvhi r19, hi(0x80004004)
+	ori  r19, r19, lo(0x80004004)
+	sw   (r19+0), r17
+*/
+
+recursive_conf:
+
+	/// print data
+	mv	r1, r25
+	calli	printint
+	PRINT(spacer)
+	mv	r1, r24
+	calli	printint
+	PRINT(nl)
+	//PRINT(spacer)
+	//mvu	r1, 1
+	xor 	r1, r1, r1
+	xor	r2, r2, r2
+	calli	memtest
+	bne	r1, r0, print_success
+
+
+/*
+	mvhi r19, hi(0x80001004)
+	ori  r19, r19, lo(0x80001004)
+	sw   (r19+0), r4
+	mvhi r19, hi(0x80004004)
+	ori  r19, r19, lo(0x80004004)
+	sw   (r19+0), r6
+	mv	r1, r3
+*/
+	//calli	printint
+	//PRINT(nl)
+
+
+	
+	addi	r15, r15, 1
+	be	r15, r10, inc_delay
+	bne	r12, r0, dec_dqs
+
+
+inc_dqs:
+	addi	r24, r24, 1
+	mvhi	r1, hi(CSR_HPDMC_IODELAY)
+	ori	r1, r1, lo(CSR_HPDMC_IODELAY)
+	mvu	r2, (HPDMC_DQSDELAY_CE|HPDMC_DQSDELAY_INC)
+	sw	(r1+0), r2
+	bi	wait_dqs_b
+dec_dqs:
+	addi	r24, r24, -1
+	mvhi	r1, hi(CSR_HPDMC_IODELAY)
+	ori	r1, r1, lo(CSR_HPDMC_IODELAY)
+	mvu	r2, (HPDMC_DQSDELAY_CE)
+	sw	(r1+0), r2
+wait_dqs_b:
+	lw	r2, (r1+0)
+	andi	r2, r2, HPDMC_DQSDELAY_RDY
+	be	r2, r0, wait_dqs_b
+	bi	recursive_conf
+
+inc_delay:
+	mvhi	r15, hi(0x00000000)
+	ori	r15, r15, lo(0x00000000)	
+	xor	r12, r13, r12
+	addi	r16, r16, 1
+
+	addi	r25, r25, 1
+	mvhi	r1, hi(CSR_HPDMC_IODELAY)
+	ori	r1, r1, lo(CSR_HPDMC_IODELAY)
+	mvu	r2, (HPDMC_IDELAY_CE|HPDMC_IDELAY_INC)
+	sw	(r1+0), r2
+
+	be	r16, r11, end
+	bi	recursive_conf
+
+end:
+	//PRINT(memtestfailed)
+	bi loop_end
+
+print_success:
+	PRINT(memtestpassed)
+	//bi	boot
+
+loop_end:
+	nop
+	nop
+	nop
+	bi loop_end
+
+
 /* getkey - gets a character from the console
  *
  * inputs:	none
@@ -363,15 +574,106 @@ getkey:
  * clobbers:	r1, r3, r4, r5, r6, r7
  */
 memtest:
+
+	/*write and read memory*/
+	// primera escritura
+	mvhi r19, hi(0x40000000)
+	ori  r19, r19, lo(0x40000000)
+
+	mvhi r4, hi(0xabadface)
+	ori  r4, r4, lo(0xabadface)
+	sw   (r19+0), r4		// almacenar dato en memoria
+
+	mvhi r19, hi(0x80001004)
+	ori  r19, r19, lo(0x80001004)
+	sw   (r19+0), r4		// visualizar dato en lcd
+
+	
+	// segunda escritura
+	mvhi r19, hi(0x40002000)
+	ori  r19, r19, lo(0x40002000)
+
+	mvhi r4, hi(0xcafebabe)
+	ori  r4, r4, lo(0xcafebabe)
+	sw   (r19+0), r4		// almacenar dato en memoria
+
+	mvhi r19, hi(0x80005004)
+	ori  r19, r19, lo(0x80005004)
+	sw   (r19+0), r4		//visualizar dato en lcd
+
+
+		// tercera escritura
+	mvhi r19, hi(0x40002100)
+	ori  r19, r19, lo(0x40002100)
+
+	mvhi r4, hi(0x12345678)
+	ori  r4, r4, lo(0x12345678)
+	sw   (r19+0), r4		// almacenar dato en memoria
+
+
+	// primera lectura
+	mvhi r19, hi(0x40000000)
+	ori  r19, r19, lo(0x40000000)
+	lw   r4, (r19+0)		// leer dato	
+
+	// segunda lectura
+	mvhi r19, hi(0x40002000)
+	ori  r19, r19, lo(0x40002000)
+	lw   r5, (r19+0)		// leer dato	
+
+
+	mvhi r19, hi(0x80004004)	// visualizar lectura en lcd
+	ori  r19, r19, lo(0x80004004)
+	sw   (r19+0), r4
+
+
+	mvhi r19, hi(0x80006004)	// visualizar lectura en lcd
+	ori  r19, r19, lo(0x80006004)
+	sw   (r19+0), r5
+
+//	bi	memtest
+/*
+	mvhi r13, hi(0x41000000)
+	ori  r13, r13, lo(0x41000000)
+	mvhi r18, hi(0x53334558)
+	ori  r18, r18, lo(0x53334558)
+	sw   (r13+4), r18
+*/
+/*
+inc_delay_test:
+
+	mvhi	r1, hi(CSR_HPDMC_IODELAY)
+	ori	r1, r1, lo(CSR_HPDMC_IODELAY)
+	mvu	r2, (HPDMC_IDELAY_CE|HPDMC_IDELAY_INC)
+	sw	(r1+0), r2
+
+
+
+// almacenar dato en memoria
+	mvhi r19, hi(0x40001000)
+	ori  r19, r19, lo(0x40001000)
+
+	mvhi r4, hi(0xabadface)
+	ori  r4, r4, lo(0xabadface)
+	sw   (r19+0), r4		
+
+	lw   r4, (r19+0)	
+
+	bi 	inc_delay_test
+*/
+
 	/* 1. fill with pattern */
 	mvhi	r5, 0x4000	/* r5 - current address */
-	mvhi	r3, 0x200	/* r3 - remaining words */
+	ori	r5, r5, lo(0x0000)
+	mvhi	r3, 0x0ff	/* r3 - remaining words */
+	ori	r3, r3, lo(0x0000)
 	mv	r4, r3		/* r4 - number of words to test */
 	mv	r6, r2		/* r6 - current value of the PRNG */
 	mvhi	r7, hi(22695477)
 	ori	r7, r7, lo(22695477)
 	bne	r1, r0, patloop
 	mvhi	r3, 0x10
+	ori	r3, r3, lo(0x0000)
 	mv	r4, r3
 patloop:
 	sw	(r5+0), r6
@@ -382,6 +684,7 @@ patloop:
 	bne	r3, r0, patloop
 	/* 2. check pattern */
 	mvhi	r5, 0x4000	/* r5 - current address */
+	ori	r5, r5, lo(0x0000)
 	mv	r3, r4		/* r3 - remaining words */
 	mv	r6, r2		/* r6 - current value of the PRNG */
 chkloop:
@@ -392,14 +695,91 @@ chkloop:
 	addi	r5, r5, 4
 	addi	r3, r3, -1
 	bne	r3, r0, chkloop
+//	PRINT(memtestpassed)
 	mvu	r1, 1
 	ret
 testfail:
+
+/*
+	lw   r5, (r13+4)
+	mvhi r19, hi(0x80005004)
+	ori  r19, r19, lo(0x80005004)
+	sw   (r19+0), r5
+*/
+
+// prueba de memoria
+// almacenar datos iniciales.
+/*
+	mvhi r2, hi(0x000001ff)		// cantidad de datos
+	ori  r2, r2, lo(0x000001ff)
+	mvhi r4, hi(0xabadface)		// dato que se almacena
+	ori  r4, r4, lo(0xabadface)
+	mvhi r19, hi(0x40000000)	// direccion de inicio
+	ori  r19, r19, lo(0x40000000)
+	sw   (r19+0), r4
+	sw   (r19+8), r4
+*/
+
+// direccion que se evalua
+/*
+	mvhi r18, hi(0x40000000)
+	ori  r18, r18, lo(0x40000000)
+loop_test:
+	// escribir dato
+	sw   (r18+0), r4		
+
+	// verificar datos
+	lw	r5, (r19+0)
+	bne	r5, r4, fail
+	lw	r5, (r19+8)
+	bne	r5, r4, fail
+	lw	r5, (r18+0)
+	bne	r5, r4, fail
+	addi	r18, r18, 4
+	addi	r2, r2, -1
+	bne	r2, r0, loop_test
+	calli	print_success
+
+
+fail:
+	
+*/
+
+//	calli	end
+/*
+	mvhi r19, hi(0x80001004)
+	ori  r19, r19, lo(0x80001004)
+	sw   (r19+0), r4
+	mvhi r19, hi(0x80004004)
+	ori  r19, r19, lo(0x80004004)
+	sw   (r19+0), r6
+
+	mvhi r19, hi(0x80005004)
+	ori  r19, r19, lo(0x80005004)
+	sw   (r19+0), r3
+
+
+	mvhi r19, hi(0x80006004)
+	ori  r19, r19, lo(0x80006004)
+	lw   r5, (r13+4)	
+	sw   (r19+0), r5
+*/
+//	PRINT(memtestfailed)
+
+
+
+	mvhi r19, hi(0x40001000)
+	ori  r19, r19, lo(0x40001000)
+
+	mvhi r4, hi(0xabadface)
+	ori  r4, r4, lo(0xabadface)
+	sw   (r19+0), r4		// almacenar dato en memoria
+
 	xor	r1, r1, r1
 	ret
 
 #ifndef FEAT_NO_OUTPUT
-/* printint - prints an integer between -999 and 999
+/* printint - prints an integer 0-999
  *
  * inputs:	r1 - input
  * outputs:	none
@@ -408,20 +788,7 @@ testfail:
 printint:
 	mvhi	r2, hi(CSR_UART_RXTX)
 	ori	r2, r2, lo(CSR_UART_RXTX)
-
-	bge	r1, r0, positive
-	xnor	r1, r0, r1
-	addi	r1, r1, 1
 	
-	mvu	r3, '-'
-	sw	(r2+0), r3
-writeintwait0:
-	rcsr	r3, IP
-	andi	r3, r3, IRQ_UARTTX
-	be	r3, r0, writeintwait0
-	wcsr	IP, r3
-
-positive:
 	mvu	r4, 100
 	divu	r3, r1, r4
 	modu	r1, r1, r4
@@ -498,9 +865,11 @@ autocalfail: .string "Autocalibration failed, entering manual mode.\n"
 autocalok: .string "Autocalibration OK, testing memory...\n"
 continueboot: .string "All SDRAM initialization completed, boot continuing.\n\n"
 testfailmsg: .string "Memory test failed, entering manual mode.\n"
-manualkeys: .string "\nu: inc. DQ delay  // d: dec. DQ delay\nt: test (small)   // T: test (large)\nc: calibrate IODELAY2s\nr: reset IODELAY2s\np: display pattern\nb: boot\n"
+manualkeys: .string "\nu: inc. input delay // d: dec. input delay\nU: inc. DQS phase   // D: dec. DQS phase\nt: test (small)     // T: test (large)\np: display pattern\nb: boot\n"
 memtestfailed: .string "Memory test failed.\n"
 memtestpassed: .string "Memory test passed.\n"
+spacer: .string " -- "
 nl: .string "\n"
 #endif /* FEAT_NO_OUTPUT */
+
 

@@ -1,6 +1,6 @@
 /*
  * Milkymist VJ SoC
- * Copyright (C) 2007, 2008, 2009, 2010 Sebastien Bourdeauducq
+ * Copyright (C) 2007, 2008, 2009 Sebastien Bourdeauducq
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,8 +16,8 @@
  */
 
 module fmlbrg #(
-	parameter fml_depth = 26,
-	parameter cache_depth = 14, /* 16kB cache */
+	parameter fml_depth = 25,
+	parameter cache_depth = 14, /* 16kb cache */
 	parameter invalidate_bit = fml_depth
 ) (
 	input sys_clk,
@@ -37,15 +37,9 @@ module fmlbrg #(
 	output reg fml_stb,
 	output reg fml_we,
 	input fml_ack,
-	output [7:0] fml_sel,
-	output [63:0] fml_do,
-	input [63:0] fml_di,
-
-	/* Direct Cache Bus */
-	input dcb_stb,
-	input [fml_depth-1:0] dcb_adr,
-	output [63:0] dcb_dat,
-	output dcb_hit
+	output [3:0] fml_sel,
+	output [31:0] fml_do,
+	input [31:0] fml_di
 );
 
 /*
@@ -57,15 +51,9 @@ module fmlbrg #(
  *
  */
 
-wire [4:0] offset = wb_adr_i[4:0];
-wire [cache_depth-1-5:0] index = wb_adr_i[cache_depth-1:5];
+wire [3:0] offset = wb_adr_i[3:0];
+wire [cache_depth-1-4:0] index = wb_adr_i[cache_depth-1:4];
 wire [fml_depth-cache_depth-1:0] tag = wb_adr_i[fml_depth-1:cache_depth];
-
-wire [4:0] dcb_offset = dcb_adr[4:0];
-wire [cache_depth-1-5:0] dcb_index = dcb_adr[cache_depth-1:5];
-wire [fml_depth-cache_depth-1:0] dcb_tag = dcb_adr[fml_depth-1:cache_depth];
-
-wire coincidence = index == dcb_index;
 
 /*
  * TAG MEMORY
@@ -74,32 +62,37 @@ wire coincidence = index == dcb_index;
  * Contains valid bit + dirty bit + tag
  */
 
-wire [cache_depth-1-5:0] tagmem_a;
+wire [cache_depth-1-4:0] tagmem_a;
 reg tagmem_we;
 wire [fml_depth-cache_depth-1+2:0] tagmem_di;
-wire [fml_depth-cache_depth-1+2:0] tagmem_do;
+reg [fml_depth-cache_depth-1+2:0] tagmem_do;
 
-wire [cache_depth-1-5:0] tagmem_a2;
-wire [fml_depth-cache_depth-1+2:0] tagmem_do2;
+reg [fml_depth-cache_depth-1+2:0] tags[0:(1 << (cache_depth-4))-1];
 
-fmlbrg_tagmem #(
-	.depth(cache_depth-5),
-	.width(fml_depth-cache_depth+2)
-) tagmem (
-	.sys_clk(sys_clk),
+always @(posedge sys_clk) begin
+	if(tagmem_we) begin
+		tags[tagmem_a] <= tagmem_di;
+		tagmem_do <= tagmem_di;
+	end else
+		tagmem_do <= tags[tagmem_a];
+end
 
-	.a(tagmem_a),
-	.we(tagmem_we),
-	.di(tagmem_di),
-	.do(tagmem_do),
+// synthesis translate_off
+integer i;
+initial begin
+	for(i=0;i<(1 << (cache_depth-4));i=i+1)
+		tags[i] = 0;
+end
+// synthesis translate_on
 
-	.a2(tagmem_a2),
-	.do2(tagmem_do2)
-);
+reg index_load;
+reg [cache_depth-1-4:0] index_r;
+always @(posedge sys_clk) begin
+	if(index_load)
+		index_r <= index;
+end
 
 assign tagmem_a = index;
-
-assign tagmem_a2 = dcb_index;
 
 reg di_valid;
 reg di_dirty;
@@ -110,18 +103,12 @@ wire do_dirty;
 wire [fml_depth-cache_depth-1:0] do_tag;
 wire cache_hit;
 
-wire do2_valid;
-wire [fml_depth-cache_depth-1:0] do2_tag;
-
 assign do_valid = tagmem_do[fml_depth-cache_depth-1+2];
 assign do_dirty = tagmem_do[fml_depth-cache_depth-1+1];
 assign do_tag = tagmem_do[fml_depth-cache_depth-1:0];
 
-assign do2_valid = tagmem_do2[fml_depth-cache_depth-1+2];
-assign do2_tag = tagmem_do2[fml_depth-cache_depth-1:0];
-
 always @(posedge sys_clk)
-	fml_adr <= {do_tag, index, 5'd0};
+	fml_adr <= {do_tag, index, offset};
 
 /*
  * DATA MEMORY
@@ -131,12 +118,9 @@ always @(posedge sys_clk)
  */
 
 wire [cache_depth-3-1:0] datamem_a;
-reg [7:0] datamem_we;
-wire [63:0] datamem_di;
-wire [63:0] datamem_do;
-
-wire [cache_depth-3-1:0] datamem_a2;
-wire [63:0] datamem_do2;
+wire [3:0] datamem_we;
+reg [31:0] datamem_di;
+wire [31:0] datamem_do;
 
 fmlbrg_datamem #(
 	.depth(cache_depth-3)
@@ -146,10 +130,7 @@ fmlbrg_datamem #(
 	.a(datamem_a),
 	.we(datamem_we),
 	.di(datamem_di),
-	.do(datamem_do),
-
-	.a2(datamem_a2),
-	.do2(datamem_do2)
+	.do(datamem_do)
 );
 
 reg [1:0] bcounter;
@@ -157,57 +138,63 @@ reg [1:0] bcounter_next;
 always @(posedge sys_clk) begin
 	if(sys_rst)
 		bcounter <= 2'd0;
-	else
+	else begin
 		bcounter <= bcounter_next;
+	end
 end
 
-reg [1:0] bcounter_sel;
-
-localparam BCOUNTER_RESET	= 2'd0;
-localparam BCOUNTER_KEEP	= 2'd1;
-localparam BCOUNTER_LOAD	= 2'd2;
-localparam BCOUNTER_INC		= 2'd3;
-
+reg bcounter_load;
+reg bcounter_en;
 always @(*) begin
-	case(bcounter_sel)
-		BCOUNTER_RESET: bcounter_next <= 2'd0;
-		BCOUNTER_KEEP: bcounter_next <= bcounter;
-		BCOUNTER_LOAD: bcounter_next <= offset[4:3];
-		BCOUNTER_INC: bcounter_next <= bcounter + 2'd1;
-		default: bcounter_next <= 2'bxx;
-	endcase
+	if(bcounter_load)
+		bcounter_next <= offset[3:2];
+	else if(bcounter_en)
+		bcounter_next <= bcounter + 2'd1;
+	else
+		bcounter_next <= bcounter;
 end
 
-assign datamem_a = {index, bcounter_next};
-
-assign datamem_a2 = {dcb_index, dcb_offset[4:3]};
-
-reg wordsel;
-reg next_wordsel;
-always @(posedge sys_clk)
-	wordsel <= next_wordsel;
+assign datamem_a = { index_load ? index : index_r, bcounter_next };
 
 reg datamem_we_wb;
 reg datamem_we_fml;
 
+assign datamem_we = ({4{datamem_we_fml}} & 4'hff)
+	|({4{datamem_we_wb &  wb_adr_i[2]}} & {wb_sel_i})
+	|({4{datamem_we_wb & ~wb_adr_i[2]}} & {wb_sel_i});
+
 always @(*) begin
-	if(datamem_we_fml)
-		datamem_we = 8'hff;
-	else if(datamem_we_wb) begin
-		if(wordsel)
-			datamem_we = {4'h0, wb_sel_i};
-		else
-			datamem_we = {wb_sel_i, 4'h0};
-	end else
-		datamem_we = 8'h00;
+	datamem_di = fml_di;
+	if(datamem_we_wb) begin
+//		if(wb_adr_i[1]) begin
+			/* lower 32-bit word */
+			if(wb_sel_i[0])
+				datamem_di[7:0] = wb_dat_i[7:0];
+			if(wb_sel_i[1])
+				datamem_di[15:8] = wb_dat_i[15:8];
+			if(wb_sel_i[2])
+				datamem_di[23:16] = wb_dat_i[23:16];
+			if(wb_sel_i[3])
+				datamem_di[31:24] = wb_dat_i[31:24];
+
+//		end else begin
+			/* upper 32-bit word */
+/*			if(wb_sel_i[0])
+				datamem_di[23:16] = wb_dat_i[7:0];
+			if(wb_sel_i[1])
+				datamem_di[31:24] = wb_dat_i[15:8];
+			if(wb_sel_i[2])
+				datamem_di[55:48] = wb_dat_i[23:16];
+			if(wb_sel_i[3])
+				datamem_di[63:56] = wb_dat_i[31:24];
+*/
+//		end
+	end
 end
 
-assign datamem_di = datamem_we_wb ? {wb_dat_i, wb_dat_i} : fml_di;
-
-assign wb_dat_o = wordsel ? datamem_do[31:0] : datamem_do[63:32];
+assign wb_dat_o =datamem_do;// wb_adr_i[1] ? datamem_do[15:0] : datamem_do[31:16];
 assign fml_do = datamem_do;
 assign fml_sel = 8'hff;
-assign dcb_dat = datamem_do2;
 
 /* FSM */
 
@@ -221,8 +208,7 @@ reg [3:0] next_state;
 
 parameter IDLE			= 4'd0;
 parameter TEST_HIT		= 4'd1;
-
-parameter WB_BURST		= 4'd2;
+parameter WRITE_HIT		= 4'd2;
 
 parameter EVICT			= 4'd3;
 parameter EVICT2		= 4'd4;
@@ -241,10 +227,10 @@ parameter INVALIDATE		= 4'd14;
 
 always @(posedge sys_clk) begin
 	if(sys_rst)
-		state <= IDLE;
+		state = IDLE;
 	else begin
 		//$display("state: %d -> %d", state, next_state);
-		state <= next_state;
+		state = next_state;
 	end
 end
 
@@ -253,8 +239,10 @@ always @(*) begin
 	di_valid = 1'b0;
 	di_dirty = 1'b0;
 	
-	bcounter_sel = BCOUNTER_KEEP;
-	next_wordsel = 1'bx;
+	bcounter_load = 1'b0;
+	bcounter_en = 1'b0;
+	
+	index_load = 1'b1;
 	
 	datamem_we_wb = 1'b0;
 	datamem_we_fml = 1'b0;
@@ -268,8 +256,7 @@ always @(*) begin
 	
 	case(state)
 		IDLE: begin
-			bcounter_sel = BCOUNTER_LOAD;
-			next_wordsel = wb_adr_i[2];
+			bcounter_load = 1'b1;
 			if(wb_cyc_i & wb_stb_i) begin
 				if(wb_adr_i[invalidate_bit])
 					next_state = TEST_INVALIDATE;
@@ -278,19 +265,13 @@ always @(*) begin
 			end
 		end
 		TEST_HIT: begin
-			next_wordsel = ~wordsel;
 			if(cache_hit) begin
-				wb_ack_o = 1'b1;
 				if(wb_we_i) begin
-					di_valid = 1'b1;
-					di_dirty = 1'b1;
-					tagmem_we = 1'b1;
-					datamem_we_wb = 1'b1;
-				end
-				if(wb_cti_i == 3'b010)
-					next_state = WB_BURST;
-				else
+					next_state = WRITE_HIT;
+				end else begin
+					wb_ack_o = 1'b1;
 					next_state = IDLE;
+				end
 			end else begin
 				if(do_dirty)
 					next_state = EVICT;
@@ -298,37 +279,39 @@ always @(*) begin
 					next_state = REFILL;
 			end
 		end
-		
-		WB_BURST: begin
-			next_wordsel = ~wordsel;
-			if(wordsel ^ wb_we_i)
-				bcounter_sel = BCOUNTER_INC;
-			if(wb_we_i)
-				datamem_we_wb = 1'b1;
+		WRITE_HIT: begin
+			di_valid = 1'b1;
+			di_dirty = 1'b1;
+			tagmem_we = 1'b1;
+			datamem_we_wb = 1'b1;
 			wb_ack_o = 1'b1;
-			if(wb_cti_i != 3'b010)
-				next_state = IDLE;
+			next_state = IDLE;
 		end
 		
+		/*
+		 * Burst counter has already been loaded.
+		 * Yes, we evict lines in different order depending
+		 * on the critical word position of the cache miss
+		 * inside the line, but who cares :)
+		 */
 		EVICT: begin
 			fml_stb = 1'b1;
 			fml_we = 1'b1;
 			if(fml_ack) begin
-				bcounter_sel = BCOUNTER_INC;
+				bcounter_en = 1'b1;
 				next_state = EVICT2;
-			end else
-				bcounter_sel = BCOUNTER_RESET;
+			end
 		end
 		EVICT2: begin
-			bcounter_sel = BCOUNTER_INC;
+			bcounter_en = 1'b1;
 			next_state = EVICT3;
 		end
 		EVICT3: begin
-			bcounter_sel = BCOUNTER_INC;
+			bcounter_en = 1'b1;
 			next_state = EVICT4;
 		end
 		EVICT4: begin
-			bcounter_sel = BCOUNTER_INC;
+			bcounter_en = 1'b1;
 			if(wb_adr_i[invalidate_bit])
 				next_state = INVALIDATE;
 			else
@@ -342,32 +325,52 @@ always @(*) begin
 				di_dirty = 1'b1;
 			else
 				di_dirty = 1'b0;
-			if(~(dcb_stb & coincidence)) begin
-				tagmem_we = 1'b1;
-				next_state = REFILL_WAIT;
-			end
+			tagmem_we = 1'b1;
+			next_state = REFILL_WAIT;
 		end
 		REFILL_WAIT: next_state = REFILL1; /* one cycle latency for the FML address */
 		REFILL1: begin
-			bcounter_sel = BCOUNTER_RESET;
+			bcounter_load = 1'b1;
 			fml_stb = 1'b1;
+			/* Asserting both
+			 * datamem_we_fml and
+			 * datamem_we_wb write the 64-bit word from FML
+			 * with a 32-bit (at most) overlay from WB
+			 */
 			datamem_we_fml = 1'b1;
+			if(wb_we_i)
+				datamem_we_wb = 1'b1;
 			if(fml_ack)
 				next_state = REFILL2;
 		end
 		REFILL2: begin
+			/*
+			 * For reads, the critical word has just been written to the datamem
+			 * so by acking the cycle now we get the correct result (because the
+			 * datamem is a write-first SRAM).
+			 * For writes, we could have acked the cycle before but it's simpler this way.
+			 * Otherwise, we have the case of a master releasing WE just after ACK,
+			 * and we must add a reg to tell whether we have a read or a write in REFILL2...
+			 */
+			wb_ack_o = 1'b1;
+			/* Now we must use our copy of index, as the WISHBONE
+			 * address may change.
+			 */
+			index_load = 1'b0;
 			datamem_we_fml = 1'b1;
-			bcounter_sel = BCOUNTER_INC;
+			bcounter_en = 1'b1;
 			next_state = REFILL3;
 		end
 		REFILL3: begin
+			index_load = 1'b0;
 			datamem_we_fml = 1'b1;
-			bcounter_sel = BCOUNTER_INC;
+			bcounter_en = 1'b1;
 			next_state = REFILL4;
 		end
 		REFILL4: begin
+			index_load = 1'b0;
 			datamem_we_fml = 1'b1;
-			bcounter_sel = BCOUNTER_INC;
+			bcounter_en = 1'b1;
 			next_state = IDLE;
 		end
 		
@@ -386,27 +389,5 @@ always @(*) begin
 		end
 	endcase
 end
-
-/* Do not hit on a line being refilled */
-reg dcb_can_hit;
-
-always @(posedge sys_clk) begin
-	dcb_can_hit <= 1'b0;
-	if(dcb_stb) begin
-		if((state != REFILL_WAIT)
-		|| (state != REFILL2)
-		|| (state != REFILL3)
-		|| (state != REFILL4))
-			dcb_can_hit <= 1'b1;
-		if(~coincidence)
-			dcb_can_hit <= 1'b1;
-	end
-end
-
-reg [fml_depth-cache_depth-1:0] dcb_tag_r;
-always @(posedge sys_clk)
-	dcb_tag_r = dcb_tag;
-
-assign dcb_hit = dcb_can_hit & do2_valid & (do2_tag == dcb_tag_r);
 
 endmodule

@@ -1,0 +1,36 @@
+[size] 1268 600
+[pos] -1 -1
+*-18.000000 16652000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] system_tb.
+[treeopen] system_tb.system.
+[treeopen] system_tb.system.cpu.
+[treeopen] system_tb.system.cpu.cpu.
+@28
+system_tb.sys_clk
+system_tb.resetin
+@22
+system_tb.system.cpudbus_adr[31:0]
+system_tb.system.cpuibus_adr[31:0]
+system_tb.system.cpuibus_dat_r[31:0]
+@28
+system_tb.system.cpuibus_ack
+system_tb.system.cpuibus_cyc
+system_tb.system.cpuibus_stb
+@22
+system_tb.system.norflash.flash_adr[23:0]
+system_tb.system.norflash.flash_d[15:0]
+system_tb.system.norflash.flash_do[15:0]
+@28
+system_tb.system.norflash.wb_cyc_i
+system_tb.system.norflash.wb_stb_i
+system_tb.system.norflash.wb_ack_o
+@22
+system_tb.system.norflash.wb_sel_i[3:0]
+system_tb.system.cpu.cpu.instruction_unit.instruction_f[31:0]
+@28
+system_tb.system.norflash.counter_done
+system_tb.system.norflash.lsb
+@22
+system_tb.system.cpu.I_SEL_O[3:0]
+@23
+system_tb.system.norflash.wb_dat_o[31:0]

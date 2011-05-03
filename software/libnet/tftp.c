@@ -88,7 +88,6 @@ int tftp_get(unsigned int ip, const char *filename, char *buffer)
 	int len;
 	int tries;
 	int i;
-	int length_before;
 	
 	if(!microudp_arp_resolve(ip))
 		return -1;
@@ -116,18 +115,7 @@ int tftp_get(unsigned int ip, const char *filename, char *buffer)
 		}
 	}
 
-	length_before = total_length;
-	while(!transfer_finished) {
-		if(length_before != total_length) {
-			i = 12000000;
-			length_before = total_length;
-		}
-		if(i-- == 0) {
-			microudp_set_callback(NULL);
-			return -1;
-		}
-		microudp_service();
-	}
+	while(!transfer_finished) microudp_service();
 
 	microudp_set_callback(NULL);
 

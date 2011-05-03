@@ -7,5 +7,6 @@ fi
 # Board name (name of the subfolder of the "boards" folder)
 if [ -z "$BOARD" ]
 then
-	BOARD=milkymist-one
+	BOARD=digilent-xc3s500e
 fi
+

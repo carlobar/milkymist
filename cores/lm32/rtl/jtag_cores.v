@@ -1,86 +1,125 @@
-/*
- * Milkymist SoC
- * Copyright (c) 2010 Michael Walle
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. The name of the author may not be used to endorse or promote products
- *    derived from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
- * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
- * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
- * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- */
+// ============================================================================
+//                           COPYRIGHT NOTICE
+// Copyright 2006 (c) Lattice Semiconductor Corporation
+// ALL RIGHTS RESERVED
+// This confidential and proprietary software may be used only as authorised by
+// a licensing agreement from Lattice Semiconductor Corporation.
+// The entire notice above must be reproduced on all authorized copies and
+// copies may only be made to the extent permitted by a licensing agreement from
+// Lattice Semiconductor Corporation.
+//
+// Lattice Semiconductor Corporation        TEL : 1-800-Lattice (USA and Canada)
+// 5555 NE Moore Court                            408-826-6000 (other locations)
+// Hillsboro, OR 97124                     web  : http://www.latticesemi.com/
+// U.S.A                                   email: techsupport@latticesemi.com
+// ============================================================================/
+//                         FILE DETAILS
+// Project          : LatticeMico32
+// File             : jtag_cores.v
+// Title            : Instantiates all IP cores on JTAG chain.
+// Dependencies     : system_conf.v
+// Version          : 6.0.14
+//                  : modified to use jtagconn for LM32,
+//                  : all technologies 7/10/07
+// Version          : 7.0SP2, 3.0
+//                  : No Change
+// Version          : 3.1
+//                  : No Change
+// ============================================================================
 
-module jtag_cores (
-    input [7:0] reg_d,
-    input [2:0] reg_addr_d,
-    output reg_update,
-    output [7:0] reg_q,
-    output [2:0] reg_addr_q,
-    output jtck,
-    output jrstn
+`include "system_conf.v"
+
+/////////////////////////////////////////////////////
+// jtagconn16 Module Definition
+/////////////////////////////////////////////////////
+
+module jtagconn16 (er2_tdo, jtck, jtdi, jshift, jupdate, jrstn, jce2, ip_enable) ;
+    input  er2_tdo ; 
+    output jtck ; 
+    output jtdi ; 
+    output jshift ; 
+    output jupdate ; 
+    output jrstn ; 
+    output jce2 ; 
+    output ip_enable ; 
+endmodule
+
+/////////////////////////////////////////////////////
+// Module interface
+/////////////////////////////////////////////////////
+
+(* syn_hier="hard" *) module jtag_cores (
+    // ----- Inputs -------
+    reg_d,
+    reg_addr_d,
+    // ----- Outputs -------    
+    reg_update,
+    reg_q,
+    reg_addr_q,
+    jtck,
+    jrstn
+    );
+    
+/////////////////////////////////////////////////////
+// Inputs
+/////////////////////////////////////////////////////
+
+input [7:0] reg_d;
+input [2:0] reg_addr_d;
+
+/////////////////////////////////////////////////////
+// Outputs
+/////////////////////////////////////////////////////
+   
+output reg_update;
+wire   reg_update;
+output [7:0] reg_q;
+wire   [7:0] reg_q;
+output [2:0] reg_addr_q;
+wire   [2:0] reg_addr_q;
+
+output jtck;
+wire   jtck; 	/* synthesis syn_keep=1 */
+output jrstn;
+wire   jrstn;  /* synthesis syn_keep=1 */	
+
+/////////////////////////////////////////////////////
+// Instantiations
+/////////////////////////////////////////////////////
+
+wire jtdi;          /* synthesis syn_keep=1 */
+wire er2_tdo2;      /* synthesis syn_keep=1 */
+wire jshift;        /* synthesis syn_keep=1 */
+wire jupdate;       /* synthesis syn_keep=1 */
+wire jce2;          /* synthesis syn_keep=1 */
+wire ip_enable;     /* synthesis syn_keep=1 */
+    
+(* JTAG_IP="LM32", IP_ID="0", HUB_ID="0", syn_noprune=1 *) jtagconn16 jtagconn16_lm32_inst (
+    .er2_tdo        (er2_tdo2),
+    .jtck           (jtck),
+    .jtdi           (jtdi),
+    .jshift         (jshift),
+    .jupdate        (jupdate),
+    .jrstn          (jrstn),
+    .jce2           (jce2),
+    .ip_enable      (ip_enable)
 );
-
-wire tck;
-wire tdi;
-wire tdo;
-wire shift;
-wire update;
-wire reset;
-
-jtag_tap jtag_tap (
-	.tck(tck),
-	.tdi(tdi),
-	.tdo(tdo),
-	.shift(shift),
-	.update(update),
-	.reset(reset)
-);
-
-reg [10:0] jtag_shift;
-reg [10:0] jtag_latched;
-
-always @(posedge tck or posedge reset)
-begin
-	if(reset)
-		jtag_shift <= 11'b0;
-	else begin
-		if(shift)
-			jtag_shift <= {tdi, jtag_shift[10:1]};
-		else
-			jtag_shift <= {reg_d, reg_addr_d};
-	end
-end
-
-assign tdo = jtag_shift[0];
-
-always @(posedge reg_update or posedge reset)
-begin
-	if(reset)
-		jtag_latched <= 11'b0;
-	else
-		jtag_latched <= jtag_shift;
-end
-
-assign reg_update = update;
-assign reg_q = jtag_latched[10:3];
-assign reg_addr_q = jtag_latched[2:0];
-assign jtck = tck;
-assign jrstn = ~reset;
-
+    
+(* syn_noprune=1 *) jtag_lm32 jtag_lm32_inst (
+    .JTCK           (jtck),
+    .JTDI           (jtdi),
+    .JTDO2          (er2_tdo2),
+    .JSHIFT         (jshift),
+    .JUPDATE        (jupdate),
+    .JRSTN          (jrstn),
+    .JCE2           (jce2),
+    .JTAGREG_ENABLE (ip_enable),
+    .CONTROL_DATAN  (),
+    .REG_UPDATE     (reg_update),
+    .REG_D          (reg_d),
+    .REG_ADDR_D     (reg_addr_d),
+    .REG_Q          (reg_q),
+    .REG_ADDR_Q     (reg_addr_q)
+    );
+    
 endmodule

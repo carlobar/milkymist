@@ -1,0 +1,17 @@
+module bufg_n_bit #(
+	parameter size = 16
+	)(
+	input [size-1:0] in,
+	input [size-1:0] out
+);
+
+genvar i;
+generate
+	for (i=0; i< size; i=i+1) begin: bufg_gen
+		BUFG buff_n (.O(out[i]), .I(in[i]));
+	end
+endgenerate
+
+
+
+endmodule

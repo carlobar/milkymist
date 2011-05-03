@@ -1,0 +1,27 @@
+[size] 1268 600
+[pos] -1 -1
+*-6.000000 164 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] tb_16_bit_interface.
+@28
+tb_16_bit_interface.clk
+tb_16_bit_interface.fml_ack_bus
+@22
+tb_16_bit_interface.fml_adr_bus[24:0]
+tb_16_bit_interface.fml_di_bus[31:0]
+tb_16_bit_interface.fml_do_bus[31:0]
+tb_16_bit_interface.fml_sel_bus[3:0]
+@29
+tb_16_bit_interface.fml_stb_bus
+@28
+tb_16_bit_interface.fml_we_bus
+tb_16_bit_interface.fml_ack_ddr
+@22
+tb_16_bit_interface.fml_adr_ddr[24:0]
+tb_16_bit_interface.fml_di_ddr[31:0]
+tb_16_bit_interface.fml_do_ddr[31:0]
+tb_16_bit_interface.fml_sel_ddr[3:0]
+@28
+tb_16_bit_interface.fml_stb_ddr
+tb_16_bit_interface.fml_we_ddr
+tb_16_bit_interface.interface.state[1:0]
+tb_16_bit_interface.interface.next_state[1:0]

@@ -151,7 +151,8 @@ parameter base_address = 0;                             // Base address of cacha
 parameter limit = 0;                                    // Limit (highest address) of cachable memory
 
 // For bytes_per_line == 4, we set 1 so part-select range isn't reversed, even though not really used 
-localparam addr_offset_width = bytes_per_line == 4 ? 1 : clogb2(bytes_per_line)-1-2;
+//localparam addr_offset_width = bytes_per_line == 4 ? 1 : clogb2(bytes_per_line)-1-2;
+localparam addr_offset_width = 2;
 localparam addr_offset_lsb = 2;
 localparam addr_offset_msb = (addr_offset_lsb+addr_offset_width-1);
 
