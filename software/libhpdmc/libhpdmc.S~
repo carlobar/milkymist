@@ -496,7 +496,7 @@ recursive_conf:
 
 	
 	addi	r15, r15, 1
-	be	r15, r15, inc_delay
+	be	r15, r10, inc_delay
 	bne	r12, r0, dec_dqs
 
 

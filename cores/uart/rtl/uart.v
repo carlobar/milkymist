@@ -1,6 +1,6 @@
 /*
  * Milkymist VJ SoC
- * Copyright (C) 2007, 2008, 2009, 2010 Sebastien Bourdeauducq
+ * Copyright (C) 2007, 2008, 2009 Sebastien Bourdeauducq
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,8 +18,7 @@
 module uart #(
 	parameter csr_addr = 4'h0,
 	parameter clk_freq = 100000000,
-	parameter baud = 115200,
-	parameter break_en_default = 1'b0
+	parameter baud = 115200
 ) (
 	input sys_clk,
 	input sys_rst,
@@ -32,10 +31,8 @@ module uart #(
 	output rx_irq,
 	output tx_irq,
 
-	input uart_rx,
-	output uart_tx,
-
-	output break
+	input uart_rxd,
+	output uart_txd
 );
 
 reg [15:0] divisor;
@@ -43,14 +40,12 @@ wire [7:0] rx_data;
 wire [7:0] tx_data;
 wire tx_wr;
 
-wire uart_tx_transceiver;
-
 uart_transceiver transceiver(
 	.sys_clk(sys_clk),
 	.sys_rst(sys_rst),
 
-	.uart_rx(uart_rx),
-	.uart_tx(uart_tx_transceiver),
+	.uart_rxd(uart_rxd),
+	.uart_txd(uart_txd),
 
 	.divisor(divisor),
 
@@ -59,55 +54,31 @@ uart_transceiver transceiver(
 
 	.tx_data(tx_data),
 	.tx_wr(tx_wr),
-	.tx_done(tx_irq),
-
-	.break(break_transceiver)
+	.tx_done(tx_irq)
 );
-
-assign uart_tx = thru ? uart_rx : uart_tx_transceiver;
-assign break = break_en & break_transceiver;
 
 /* CSR interface */
 wire csr_selected = csr_a[13:10] == csr_addr;
 
 assign tx_data = csr_di[7:0];
-assign tx_wr = csr_selected & csr_we & (csr_a[1:0] == 2'b00);
+assign tx_wr = csr_selected & csr_we & (csr_a[0] == 1'b0);
 
 parameter default_divisor = clk_freq/baud/16;
-
-reg thru;
-reg break_en;
-reg tx_pending;
 
 always @(posedge sys_clk) begin
 	if(sys_rst) begin
 		divisor <= default_divisor;
 		csr_do <= 32'd0;
-		thru <= 1'b0;
-		break_en <= break_en_default;
-		tx_pending <= 1'b0;
 	end else begin
 		csr_do <= 32'd0;
-		if(break)
-			break_en <= 1'b0;
-		if(tx_irq)
-			tx_pending <= 1'b0;
-		if(tx_wr)
-			tx_pending <= 1'b1;
 		if(csr_selected) begin
-			case(csr_a[1:0])
-				2'b00: csr_do <= rx_data;
-				2'b01: csr_do <= divisor;
-				2'b10: csr_do <= thru;
-				2'b11: csr_do <= {tx_pending, break_en};
+			case(csr_a[0])
+				1'b0: csr_do <= rx_data;
+				1'b1: csr_do <= divisor;
 			endcase
 			if(csr_we) begin
-				case(csr_a[1:0])
-					2'b00:; /* handled by transceiver */
-					2'b01: divisor <= csr_di[15:0];
-					2'b10: thru <= csr_di[0];
-					2'b11: break_en <= csr_di[0];
-				endcase
+				if(csr_a[0] == 1'b1)
+					divisor <= csr_di[15:0];
 			end
 		end
 	end

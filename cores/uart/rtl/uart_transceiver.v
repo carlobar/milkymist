@@ -1,6 +1,6 @@
 /*
  * Milkymist VJ SoC
- * Copyright (C) 2007, 2008, 2009, 2010 Sebastien Bourdeauducq
+ * Copyright (C) 2007, 2008, 2009 Sebastien Bourdeauducq
  * Copyright (C) 2007 Das Labor
  *
  * This program is free software: you can redistribute it and/or modify
@@ -20,8 +20,8 @@ module uart_transceiver(
 	input sys_rst,
 	input sys_clk,
 
-	input uart_rx,
-	output reg uart_tx,
+	input uart_rxd,
+	output reg uart_txd,
 
 	input [15:0] divisor,
 
@@ -30,9 +30,7 @@ module uart_transceiver(
 
 	input [7:0] tx_data,
 	input tx_wr,
-	output reg tx_done,
-
-	output reg break
+	output reg tx_done
 );
 
 //-----------------------------------------------------------------
@@ -54,24 +52,23 @@ always @(posedge sys_clk) begin
 end
 
 //-----------------------------------------------------------------
-// Synchronize uart_rx
+// Synchronize uart_rxd
 //-----------------------------------------------------------------
-reg uart_rx1;
-reg uart_rx2;
+reg uart_rxd1;
+reg uart_rxd2;
 
 always @(posedge sys_clk) begin
-	uart_rx1 <= uart_rx;
-	uart_rx2 <= uart_rx1;
+	uart_rxd1 <= uart_rxd;
+	uart_rxd2 <= uart_rxd1;
 end
 
 //-----------------------------------------------------------------
 // UART RX Logic
 //-----------------------------------------------------------------
 reg rx_busy;
-reg uart_rx_r;
 reg [3:0] rx_count16;
 reg [3:0] rx_bitcount;
-reg [7:0] rx_reg;
+reg [7:0] rxd_reg;
 
 always @(posedge sys_clk) begin
 	if(sys_rst) begin
@@ -79,16 +76,12 @@ always @(posedge sys_clk) begin
 		rx_busy <= 1'b0;
 		rx_count16  <= 4'd0;
 		rx_bitcount <= 4'd0;
-		break <= 1'b0;
-		uart_rx_r <= 1'b0;
 	end else begin
 		rx_done <= 1'b0;
-		break <= 1'b0;
 
 		if(enable16) begin
-			uart_rx_r <= uart_rx2;
 			if(~rx_busy) begin // look for start bit
-				if(~uart_rx2 & uart_rx_r) begin // start bit found
+				if(~uart_rxd2) begin // start bit found
 					rx_busy <= 1'b1;
 					rx_count16 <= 4'd7;
 					rx_bitcount <= 4'd0;
@@ -100,17 +93,16 @@ always @(posedge sys_clk) begin
 					rx_bitcount <= rx_bitcount + 4'd1;
 
 					if(rx_bitcount == 4'd0) begin // verify startbit
-						if(uart_rx2)
+						if(uart_rxd2)
 							rx_busy <= 1'b0;
 					end else if(rx_bitcount == 4'd9) begin
 						rx_busy <= 1'b0;
-						if(uart_rx2) begin // stop bit ok
-							rx_data <= rx_reg;
+						if(uart_rxd2) begin // stop bit ok
+							rx_data <= rxd_reg;
 							rx_done <= 1'b1;
-						end else if(rx_reg == 8'h00) // break condition
-							break <= 1'b1;
+						end // ignore RX error
 					end else
-						rx_reg <= {uart_rx2, rx_reg[7:1]};
+						rxd_reg <= {uart_rxd2, rxd_reg[7:1]};
 				end
 			end
 		end
@@ -123,21 +115,21 @@ end
 reg tx_busy;
 reg [3:0] tx_bitcount;
 reg [3:0] tx_count16;
-reg [7:0] tx_reg;
+reg [7:0] txd_reg;
 
 always @(posedge sys_clk) begin
 	if(sys_rst) begin
 		tx_done <= 1'b0;
 		tx_busy <= 1'b0;
-		uart_tx <= 1'b1;
+		uart_txd <= 1'b1;
 	end else begin
 		tx_done <= 1'b0;
 		if(tx_wr) begin
-			tx_reg <= tx_data;
+			txd_reg <= tx_data;
 			tx_bitcount <= 4'd0;
 			tx_count16 <= 4'd1;
 			tx_busy <= 1'b1;
-			uart_tx <= 1'b0;
+			uart_txd <= 1'b0;
 `ifdef SIMULATION
 			$display("UART: %c", tx_data);
 `endif
@@ -148,14 +140,14 @@ always @(posedge sys_clk) begin
 				tx_bitcount <= tx_bitcount + 4'd1;
 				
 				if(tx_bitcount == 4'd8) begin
-					uart_tx <= 1'b1;
+					uart_txd <= 1'b1;
 				end else if(tx_bitcount == 4'd9) begin
-					uart_tx <= 1'b1;
+					uart_txd <= 1'b1;
 					tx_busy <= 1'b0;
 					tx_done <= 1'b1;
 				end else begin
-					uart_tx <= tx_reg[0];
-					tx_reg <= {1'b0, tx_reg[7:1]};
+					uart_txd <= txd_reg[0];
+					txd_reg  <= {1'b0, txd_reg[7:1]};
 				end
 			end
 		end

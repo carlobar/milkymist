@@ -1,0 +1,80 @@
+Release 12.1 ngdbuild M.53d (lin)
+Copyright (c) 1995-2010 Xilinx, Inc.  All rights reserved.
+
+Command Line: /opt/Xilinx/12.1/ISE_DS/ISE/bin/lin/unwrapped/ngdbuild -uc
+system.ucf system.ngc
+
+Reading NGO file
+"/home/beren/git/milkymist/boards/digilent-xc3s500e/synthesis/build/system.ngc"
+...
+Gathering constraint information from source properties...
+Done.
+
+Annotating constraints to design from ucf file "system.ucf" ...
+Resolving constraint associations...
+Checking Constraint Associations...
+WARNING:ConstraintSystem:137 - Constraint <NET "phy_rx_clk" TNM_NET =
+   "RXCLK_GRP";> [system.ucf(230)]: No appropriate instances for the TNM
+   constraint are driven by "phy_rx_clk".
+
+WARNING:ConstraintSystem:137 - Constraint <NET "phy_tx_clk" TNM_NET =
+   "TXCLK_GRP";> [system.ucf(231)]: No appropriate instances for the TNM
+   constraint are driven by "phy_tx_clk".
+
+WARNING:ConstraintSystem:56 - Constraint <TIMESPEC "TSTXOUT" = FROM "TXCLK_GRP"
+   TO "PADS" 10 ns;> [system.ucf(232)]: Unable to find an active 'TimeGrp' or
+   'TNM' or 'TPSync' constraint named 'TXCLK_GRP'.
+
+WARNING:ConstraintSystem:56 - Constraint <TIMESPEC "TSRXIN" = FROM "PADS" TO
+   "RXCLK_GRP" 6 ns;> [system.ucf(233)]: Unable to find an active 'TimeGrp' or
+   'TNM' or 'TPSync' constraint named 'RXCLK_GRP'.
+
+WARNING:ConstraintSystem:193 - The TNM 'RXCLK_GRP', does not directly or
+   indirectly drive any flip-flops, latches and/or RAMs and cannot be actively
+   used by the referencing MaxDelay constraint 'TSRXIN'. If clock manager blocks
+   are directly or indirectly driven, a new TNM constraint will not be derived
+   since the referencing constraint is not a PERIOD constraint. This TNM is used
+   in the following user group or specification:
+   <TIMESPEC "TSRXIN" = FROM "PADS" TO "RXCLK_GRP" 6 ns;> [system.ucf(233)]
+
+WARNING:ConstraintSystem:197 - The following specification is invalid because
+   the referenced TNM constraint was removed:
+   <TIMESPEC "TSRXIN" = FROM "PADS" TO "RXCLK_GRP" 6 ns;> [system.ucf(233)]
+
+WARNING:ConstraintSystem:193 - The TNM 'TXCLK_GRP', does not directly or
+   indirectly drive any flip-flops, latches and/or RAMs and cannot be actively
+   used by the referencing MaxDelay constraint 'TSTXOUT'. If clock manager
+   blocks are directly or indirectly driven, a new TNM constraint will not be
+   derived since the referencing constraint is not a PERIOD constraint. This TNM
+   is used in the following user group or specification:
+   <TIMESPEC "TSTXOUT" = FROM "TXCLK_GRP" TO "PADS" 10 ns;> [system.ucf(232)]
+
+WARNING:ConstraintSystem:197 - The following specification is invalid because
+   the referenced TNM constraint was removed:
+   <TIMESPEC "TSTXOUT" = FROM "TXCLK_GRP" TO "PADS" 10 ns;> [system.ucf(232)]
+
+Done...
+
+Checking expanded design ...
+WARNING:NgdBuild:478 - clock net ddram/dqs_clk_n with clock driver ddram/b2
+   drives no clock pins
+WARNING:NgdBuild:470 - bidirect pad net 'phy_mii_data' has no legal driver
+
+Partition Implementation Status
+-------------------------------
+
+  No Partitions were found in this design.
+
+-------------------------------
+
+NGDBUILD Design Results Summary:
+  Number of errors:     0
+  Number of warnings:  10
+
+Total memory usage is 95128 kilobytes
+
+Writing NGD file "system.ngd" ...
+Total REAL time to NGDBUILD completion:  39 sec
+Total CPU time to NGDBUILD completion:   17 sec
+
+Writing NGDBUILD log file "system.bld"...

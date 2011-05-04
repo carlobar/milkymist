@@ -77,11 +77,13 @@ always @(posedge sys_clk) begin
 					/* Read */
 					we = 1'b0;
 					rcounter = rcounter + 1;
+					$display("Peticion lectura [M%d] Adr:%x [%x]", id, adr, sel);
 				end else begin
 					/* Write */
 					we = 1'b1;
 					dat_w = ($random << 16) + id;
 					wcounter = wcounter + 1;
+					$display("Peticion escritura [M%d] Adr:%x, dat:%x [%x]", id, adr, dat_w,  sel);
 				end
 			end
 		end

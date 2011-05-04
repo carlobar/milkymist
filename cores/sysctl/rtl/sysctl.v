@@ -81,35 +81,10 @@ wire match0 = (counter0 == compare0);
 wire match1 = (counter1 == compare1);
 
 /*
- * ICAP
- */
-
-wire icap_ready;
-wire icap_we;
-
-sysctl_icap icap(
-	.sys_clk(sys_clk),
-	.sys_rst(sys_rst),
-
-	.ready(icap_ready),
-	.we(icap_we),
-	.d(csr_di[15:0]),
-	.ce(csr_di[16]),
-	.write(csr_di[17])
-);
-
-/*
- * Debug scrachpad register
- */
-reg [7:0] debug_scratchpad;
-
-/*
  * Logic and CSR interface
  */
 
 wire csr_selected = csr_a[13:10] == csr_addr;
-
-assign icap_we = csr_selected & csr_we & (csr_a[3:0] == 4'b1101);
 
 always @(posedge sys_clk) begin
 	if(sys_rst) begin
@@ -131,8 +106,6 @@ always @(posedge sys_clk) begin
 		compare1 <= 32'hFFFFFFFF;
 
 		hard_reset <= 1'b0;
-
-		debug_scratchpad <= 8'd0;
 	end else begin
 		timer0_irq <= 1'b0;
 		timer1_irq <= 1'b0;
@@ -175,9 +148,6 @@ always @(posedge sys_clk) begin
 					4'b1001: compare1 <= csr_di;
 					4'b1010: counter1 <= csr_di;
 
-					4'b1100: debug_scratchpad <= csr_di[7:0];
-					// 1101 is ICAP and is handled separately
-					// 1110 is capabilities and is read-only
 					4'b1111: hard_reset <= 1'b1;
 				endcase
 			end
@@ -199,8 +169,6 @@ always @(posedge sys_clk) begin
 				4'b1001: csr_do <= compare1;
 				4'b1010: csr_do <= counter1;
 
-				4'b1100: csr_do <= debug_scratchpad;
-				4'b1101: csr_do <= icap_ready;
 				4'b1110: csr_do <= capabilities;
 				4'b1111: csr_do <= systemid;
 			endcase

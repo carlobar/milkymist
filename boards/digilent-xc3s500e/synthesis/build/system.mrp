@@ -1,0 +1,394 @@
+Release 12.1 Map M.53d (lin)
+Xilinx Mapping Report File for Design 'system'
+
+Design Information
+------------------
+Command Line   : map system.ngd 
+Target Device  : xc3s500e
+Target Package : fg320
+Target Speed   : -5
+Mapper Version : spartan3e -- $Revision: 1.52 $
+Mapped Date    : Tue May  3 23:59:18 2011
+
+Design Summary
+--------------
+Number of errors:      0
+Number of warnings:   26
+Logic Utilization:
+  Total Number Slice Registers:       3,519 out of   9,312   37%
+    Number used as Flip Flops:        3,515
+    Number used as Latches:               4
+  Number of 4 input LUTs:             4,469 out of   9,312   47%
+Logic Distribution:
+  Number of occupied Slices:          3,594 out of   4,656   77%
+    Number of Slices containing only related logic:   3,594 out of   3,594 100%
+    Number of Slices containing unrelated logic:          0 out of   3,594   0%
+      *See NOTES below for an explanation of the effects of unrelated logic.
+  Total Number of 4 input LUTs:       4,773 out of   9,312   51%
+    Number used as logic:             4,466
+    Number used as a route-thru:        304
+    Number used as Shift registers:       3
+
+  The Slice Logic Distribution report is not meaningful if the design is
+  over-mapped for a non-slice resource or if Placement fails.
+
+  Number of bonded IOBs:                126 out of     232   54%
+    IOB Flip Flops:                      52
+  Number of ODDR2s used:                  2
+    Number of DDR_ALIGNMENT = NONE        2
+    Number of DDR_ALIGNMENT = C0          0
+    Number of DDR_ALIGNMENT = C1          0
+  Number of RAMB16s:                     10 out of      20   50%
+  Number of BUFGMUXs:                     5 out of      24   20%
+  Number of DCMs:                         2 out of       4   50%
+  Number of MULT18X18SIOs:                3 out of      20   15%
+
+Average Fanout of Non-Clock Nets:                3.61
+
+Peak Memory Usage:  172 MB
+Total REAL time to MAP completion:  58 secs 
+Total CPU time to MAP completion:   27 secs 
+
+NOTES:
+
+   Related logic is defined as being logic that shares connectivity - e.g. two
+   LUTs are "related" if they share common inputs.  When assembling slices,
+   Map gives priority to combine logic that is related.  Doing so results in
+   the best timing performance.
+
+   Unrelated logic shares no connectivity.  Map will only begin packing
+   unrelated logic into a slice once 99% of the slices are occupied through
+   related logic packing.
+
+   Note that once logic distribution reaches the 99% level through related
+   logic packing, this does not mean the device is completely utilized.
+   Unrelated logic packing will then begin, continuing until all usable LUTs
+   and FFs are occupied.  Depending on your timing budget, increased levels of
+   unrelated logic packing may adversely affect the overall timing performance
+   of your design.
+
+Table of Contents
+-----------------
+Section 1 - Errors
+Section 2 - Warnings
+Section 3 - Informational
+Section 4 - Removed Logic Summary
+Section 5 - Removed Logic
+Section 6 - IOB Properties
+Section 7 - RPMs
+Section 8 - Guide Report
+Section 9 - Area Group and Partition Summary
+Section 10 - Timing Report
+Section 11 - Configuration String Information
+Section 12 - Control Set Information
+Section 13 - Utilization by Hierarchy
+
+Section 1 - Errors
+------------------
+
+Section 2 - Warnings
+--------------------
+WARNING:LIT:176 - Clock buffer is designated to drive clock loads. BUFGMUX
+   symbol "physical_group_sys_clk/b1" (output signal=sys_clk) has a mix of clock
+   and non-clock loads. The non-clock loads are:
+   Pin PSCLK of ddram/clkgen_dqs
+WARNING:LIT:175 - Clock buffer is designated to drive clock loads. BUFGMUX
+   symbol "physical_group_sys_clk_n/b2" (output signal=sys_clk_n) has a mix of
+   clock and non-clock loads. Some of the non-clock loads are (maximum of 5
+   listed):
+   Pin I0 of ddram/hpdmc/ddrio/oddr_dqm/oddr1/Mmux_Q11
+   Pin I0 of ddram/hpdmc/ddrio/oddr_dqm/oddr0/Mmux_Q11
+   Pin I0 of ddram/hpdmc/ddrio/sdram_dq_t<0>1
+   Pin I0 of ddram/hpdmc/ddrio/oddr_dq/oddr9/Mmux_Q11
+   Pin I0 of ddram/hpdmc/ddrio/oddr_dq/oddr8/Mmux_Q11
+WARNING:LIT:178 - Clock buffer BUFGMUX symbol
+   "physical_group_ddram/dqs_clk_n/ddram/b2" (output signal=ddram/dqs_clk_n)
+   does not drive clock loads. Driving only non-clock loads with a clock buffer
+   will cause ALL of the dedicated clock routing resources for this buffer to be
+   wasted. The non-clock loads are:
+   Pin I0 of ddram/hpdmc/ddrio/sdram_dqs_out<0>1
+WARNING:Pack:266 - The function generator cpu/cpu/adder/addsub/Result<0>1 failed
+   to merge with F5 multiplexer cpu/cpu/x_result<0>100_f5.  There is a conflict
+   for the FXMUX.  The design will exhibit suboptimal timing.
+WARNING:PhysDesignRules:372 - Gated clock. Clock net lcd/busy_data_and0000 is
+   sourced by a combinatorial pin. This is not good design practice. Use the CE
+   pin to control the loading of data into the flip-flop.
+WARNING:PhysDesignRules:367 - The signal <phy_rx_data<0>_IBUF> is incomplete.
+   The signal does not drive any load pins in the design.
+WARNING:PhysDesignRules:367 - The signal <phy_rx_data<1>_IBUF> is incomplete.
+   The signal does not drive any load pins in the design.
+WARNING:PhysDesignRules:367 - The signal <phy_rx_data<2>_IBUF> is incomplete.
+   The signal does not drive any load pins in the design.
+WARNING:PhysDesignRules:367 - The signal <phy_rx_data<3>_IBUF> is incomplete.
+   The signal does not drive any load pins in the design.
+WARNING:PhysDesignRules:367 - The signal <phy_rx_clk_IBUF> is incomplete. The
+   signal does not drive any load pins in the design.
+WARNING:PhysDesignRules:367 - The signal <phy_tx_clk_IBUF> is incomplete. The
+   signal does not drive any load pins in the design.
+WARNING:PhysDesignRules:367 - The signal <phy_col_IBUF> is incomplete. The
+   signal does not drive any load pins in the design.
+WARNING:PhysDesignRules:367 - The signal <phy_crs_IBUF> is incomplete. The
+   signal does not drive any load pins in the design.
+WARNING:PhysDesignRules:367 - The signal <uart_rx_mon_IBUF> is incomplete. The
+   signal does not drive any load pins in the design.
+WARNING:PhysDesignRules:368 - The signal <uart_tx_mon_OBUF> is incomplete. The
+   signal is not driven by any source pin in the design.
+WARNING:PhysDesignRules:367 - The signal <phy_dv_IBUF> is incomplete. The signal
+   does not drive any load pins in the design.
+WARNING:PhysDesignRules:367 - The signal <phy_mii_data_IBUF> is incomplete. The
+   signal does not drive any load pins in the design.
+WARNING:PhysDesignRules:781 - PULLUP on an active net. PULLUP of comp led<7> is
+   set but the tri state is not configured. 
+WARNING:PhysDesignRules:1063 - Invalid configuration (incorrect pin connections
+   and/or modes) on
+   block:<cpu/cpu/instruction_unit/icache/memories[1].way_0_data_ram/Mram_mem1.A
+   >:<RAMB16_RAMB16A>.  The block is configured to use an input parity pins.
+   There is a dangling output parity pin.
+WARNING:PhysDesignRules:1063 - Invalid configuration (incorrect pin connections
+   and/or modes) on
+   block:<cpu/cpu/instruction_unit/icache/memories[1].way_0_data_ram/Mram_mem2.A
+   >:<RAMB16_RAMB16A>.  The block is configured to use an input parity pins.
+   There is a dangling output parity pin.
+WARNING:PhysDesignRules:1063 - Invalid configuration (incorrect pin connections
+   and/or modes) on
+   block:<cpu/cpu/instruction_unit/icache/memories[1].way_0_data_ram/Mram_mem3.A
+   >:<RAMB16_RAMB16A>.  The block is configured to use an input parity pins.
+   There is a dangling output parity pin.
+WARNING:PhysDesignRules:1063 - Invalid configuration (incorrect pin connections
+   and/or modes) on
+   block:<cpu/cpu/instruction_unit/icache/memories[0].way_0_data_ram/Mram_mem1.A
+   >:<RAMB16_RAMB16A>.  The block is configured to use an input parity pins.
+   There is a dangling output parity pin.
+WARNING:PhysDesignRules:1063 - Invalid configuration (incorrect pin connections
+   and/or modes) on
+   block:<cpu/cpu/instruction_unit/icache/memories[0].way_0_data_ram/Mram_mem2.A
+   >:<RAMB16_RAMB16A>.  The block is configured to use an input parity pins.
+   There is a dangling output parity pin.
+WARNING:PhysDesignRules:1063 - Invalid configuration (incorrect pin connections
+   and/or modes) on
+   block:<cpu/cpu/instruction_unit/icache/memories[0].way_0_data_ram/Mram_mem3.A
+   >:<RAMB16_RAMB16A>.  The block is configured to use an input parity pins.
+   There is a dangling output parity pin.
+WARNING:PhysDesignRules:738 - Unexpected DCM configuration. DCM comp
+   ddram/clkgen_dqs has CLKOUT_PHASE_SHIFT set without a connection from CLKO or
+   CLK2X to CLKFB. To achieve fine-grained phase shifting (CLKOUT_PHASE_SHIFT =
+   FIXED or VARIABLE), CLKFB must be connected to either CLK0 or CLK2X.
+WARNING:PhysDesignRules:739 - Unexpected DCM feedback loop. The signal
+   ddram/dqs_clk on the CLKFB pin of comp ddram/clkgen_dqs is not driven by an
+   IOB or BUFGMUX therefore the phase relationship of output clocks to CLKIN
+   cannot be guaranteed.
+
+Section 3 - Informational
+-------------------------
+INFO:LIT:243 - Logical network phy_mii_data_IBUF has no load.
+INFO:LIT:395 - The above info message is repeated 10 more times for the
+   following (max. 5 shown):
+   phy_tx_clk_IBUF,
+   phy_col_IBUF,
+   phy_crs_IBUF,
+   uart_rx_mon_IBUF,
+   phy_dv_IBUF
+   To see the details of these info messages, please use the -detail switch.
+INFO:MapLib:562 - No environment variables are currently set.
+INFO:MapLib:159 - Net Timing constraints on signal clkin are pushed forward
+   through input buffer.
+INFO:MapLib:159 - Net Timing constraints on signal phy_tx_clk are pushed forward
+   through input buffer.
+INFO:MapLib:159 - Net Timing constraints on signal phy_rx_clk are pushed forward
+   through input buffer.
+INFO:LIT:244 - All of the single ended outputs in this design are using slew
+   rate limited output drivers. The delay on speed critical single ended outputs
+   can be dramatically reduced by designating them as fast outputs.
+INFO:PhysDesignRules:772 - To achieve optimal frequency synthesis performance
+   with the CLKFX and CLKFX180 outputs of the DCM comp clkgen, consult the
+   device Interactive Data Sheet.
+
+Section 4 - Removed Logic Summary
+---------------------------------
+   5 block(s) optimized away
+
+Section 5 - Removed Logic
+-------------------------
+
+Optimized Block(s):
+TYPE 		BLOCK
+GND 		XST_GND
+VCC 		XST_VCC
+
+To enable printing of redundant blocks removed and signals merged, set the
+detailed map report option and rerun map.
+
+Section 6 - IOB Properties
+--------------------------
+
++---------------------------------------------------------------------------------------------------------------------------------------------------------+
+| IOB Name                           | Type             | Direction | IO Standard          | Diff  | Drive    | Slew | Reg (s)      | Resistor | IOB      |
+|                                    |                  |           |                      | Term  | Strength | Rate |              |          | Delay    |
++---------------------------------------------------------------------------------------------------------------------------------------------------------+
+| btn<0>                             | IBUF             | INPUT     | LVTTL                |       |          |      | IFF1         | PULLDOWN | 0 / 3    |
+| btn<1>                             | IBUF             | INPUT     | LVTTL                |       |          |      | IFF1         | PULLDOWN | 0 / 3    |
+| btn<2>                             | IBUF             | INPUT     | LVTTL                |       |          |      | IFF1         | PULLDOWN | 0 / 3    |
+| clkin                              | IBUF             | INPUT     | LVCMOS33             |       |          |      |              |          | 0 / 0    |
+| e                                  | IOB              | OUTPUT    | LVCMOS33             |       | 4        | SLOW |              |          | 0 / 0    |
+| flash_adr<0>                       | IOB              | OUTPUT    | LVCMOS33             |       | 12       | SLOW |              |          | 0 / 0    |
+| flash_adr<1>                       | IOB              | OUTPUT    | LVCMOS33             |       | 12       | SLOW |              |          | 0 / 0    |
+| flash_adr<2>                       | IOB              | OUTPUT    | LVCMOS33             |       | 12       | SLOW | OFF1         |          | 0 / 0    |
+| flash_adr<3>                       | IOB              | OUTPUT    | LVCMOS33             |       | 12       | SLOW | OFF1         |          | 0 / 0    |
+| flash_adr<4>                       | IOB              | OUTPUT    | LVCMOS33             |       | 12       | SLOW | OFF1         |          | 0 / 0    |
+| flash_adr<5>                       | IOB              | OUTPUT    | LVCMOS33             |       | 12       | SLOW | OFF1         |          | 0 / 0    |
+| flash_adr<6>                       | IOB              | OUTPUT    | LVCMOS33             |       | 12       | SLOW | OFF1         |          | 0 / 0    |
+| flash_adr<7>                       | IOB              | OUTPUT    | LVCMOS33             |       | 12       | SLOW | OFF1         |          | 0 / 0    |
+| flash_adr<8>                       | IOB              | OUTPUT    | LVCMOS33             |       | 12       | SLOW | OFF1         |          | 0 / 0    |
+| flash_adr<9>                       | IOB              | OUTPUT    | LVCMOS33             |       | 12       | SLOW | OFF1         |          | 0 / 0    |
+| flash_adr<10>                      | IOB              | OUTPUT    | LVCMOS33             |       | 12       | SLOW | OFF1         |          | 0 / 0    |
+| flash_adr<11>                      | IOB              | OUTPUT    | LVCMOS33             |       | 12       | SLOW | OFF1         |          | 0 / 0    |
+| flash_adr<12>                      | IOB              | OUTPUT    | LVCMOS33             |       | 12       | SLOW | OFF1         |          | 0 / 0    |
+| flash_adr<13>                      | IOB              | OUTPUT    | LVCMOS33             |       | 12       | SLOW | OFF1         |          | 0 / 0    |
+| flash_adr<14>                      | IOB              | OUTPUT    | LVCMOS33             |       | 12       | SLOW | OFF1         |          | 0 / 0    |
+| flash_adr<15>                      | IOB              | OUTPUT    | LVCMOS33             |       | 12       | SLOW | OFF1         |          | 0 / 0    |
+| flash_adr<16>                      | IOB              | OUTPUT    | LVCMOS33             |       | 12       | SLOW | OFF1         |          | 0 / 0    |
+| flash_adr<17>                      | IOB              | OUTPUT    | LVCMOS33             |       | 12       | SLOW | OFF1         |          | 0 / 0    |
+| flash_adr<18>                      | IOB              | OUTPUT    | LVCMOS33             |       | 12       | SLOW | OFF1         |          | 0 / 0    |
+| flash_adr<19>                      | IOB              | OUTPUT    | LVCMOS33             |       | 12       | SLOW | OFF1         |          | 0 / 0    |
+| flash_adr<20>                      | IOB              | OUTPUT    | LVCMOS33             |       | 12       | SLOW | OFF1         |          | 0 / 0    |
+| flash_adr<21>                      | IOB              | OUTPUT    | LVCMOS33             |       | 12       | SLOW | OFF1         |          | 0 / 0    |
+| flash_adr<22>                      | IOB              | OUTPUT    | LVCMOS33             |       | 12       | SLOW | OFF1         |          | 0 / 0    |
+| flash_adr<23>                      | IOB              | OUTPUT    | LVCMOS33             |       | 12       | SLOW | OFF1         |          | 0 / 0    |
+| flash_byte_n                       | IOB              | OUTPUT    | LVCMOS33             |       | 4        | SLOW |              |          | 0 / 0    |
+| flash_ce_n                         | IOB              | OUTPUT    | LVCMOS33             |       | 12       | SLOW |              |          | 0 / 0    |
+| flash_d<0>                         | IOB              | BIDIR     | LVCMOS33             |       | 12       | SLOW |              |          | 0 / 0    |
+| flash_d<1>                         | IOB              | BIDIR     | LVCMOS33             |       | 12       | SLOW |              |          | 0 / 0    |
+| flash_d<2>                         | IOB              | BIDIR     | LVCMOS33             |       | 12       | SLOW |              |          | 0 / 0    |
+| flash_d<3>                         | IOB              | BIDIR     | LVCMOS33             |       | 12       | SLOW |              |          | 0 / 0    |
+| flash_d<4>                         | IOB              | BIDIR     | LVCMOS33             |       | 12       | SLOW |              |          | 0 / 0    |
+| flash_d<5>                         | IOB              | BIDIR     | LVCMOS33             |       | 12       | SLOW |              |          | 0 / 0    |
+| flash_d<6>                         | IOB              | BIDIR     | LVCMOS33             |       | 12       | SLOW |              |          | 0 / 0    |
+| flash_d<7>                         | IOB              | BIDIR     | LVCMOS33             |       | 12       | SLOW |              |          | 0 / 0    |
+| flash_d<8>                         | IOB              | BIDIR     | LVCMOS33             |       | 12       | SLOW |              |          | 0 / 0    |
+| flash_d<9>                         | IOB              | BIDIR     | LVCMOS33             |       | 12       | SLOW |              |          | 0 / 0    |
+| flash_d<10>                        | IOB              | BIDIR     | LVCMOS33             |       | 12       | SLOW |              |          | 0 / 0    |
+| flash_d<11>                        | IOB              | BIDIR     | LVCMOS33             |       | 12       | SLOW |              |          | 0 / 0    |
+| flash_d<12>                        | IOB              | BIDIR     | LVCMOS33             |       | 12       | SLOW |              |          | 0 / 0    |
+| flash_d<13>                        | IOB              | BIDIR     | LVCMOS33             |       | 12       | SLOW |              |          | 0 / 0    |
+| flash_d<14>                        | IOB              | BIDIR     | LVCMOS33             |       | 12       | SLOW |              |          | 0 / 0    |
+| flash_d<15>                        | IOB              | BIDIR     | LVCMOS33             |       | 12       | SLOW |              |          | 0 / 0    |
+| flash_oe_n                         | IOB              | OUTPUT    | LVCMOS33             |       | 12       | SLOW | OFF1         |          | 0 / 0    |
+| flash_we_n                         | IOB              | OUTPUT    | LVCMOS33             |       | 12       | SLOW | OFF1         |          | 0 / 0    |
+| led<0>                             | IOB              | OUTPUT    | LVTTL                |       | 8        | SLOW | OFF1         |          | 0 / 0    |
+| led<1>                             | IOB              | OUTPUT    | LVTTL                |       | 8        | SLOW | OFF1         |          | 0 / 0    |
+| led<2>                             | IOB              | OUTPUT    | LVTTL                |       | 8        | SLOW |              |          | 0 / 0    |
+| led<3>                             | IOB              | OUTPUT    | LVTTL                |       | 8        | SLOW |              |          | 0 / 0    |
+| led<4>                             | IOB              | OUTPUT    | LVTTL                |       | 8        | SLOW |              |          | 0 / 0    |
+| led<5>                             | IOB              | OUTPUT    | LVTTL                |       | 8        | SLOW |              |          | 0 / 0    |
+| led<6>                             | IOB              | OUTPUT    | LVTTL                |       | 8        | SLOW | OFF1         |          | 0 / 0    |
+| led<7>                             | IOB              | OUTPUT    | LVTTL                |       | 8        | SLOW | OFF1         | PULLUP   | 0 / 0    |
+| phy_col                            | IBUF             | INPUT     | LVCMOS33             |       |          |      |              |          | 0 / 0    |
+| phy_crs                            | IBUF             | INPUT     | LVCMOS33             |       |          |      |              |          | 0 / 0    |
+| phy_dv                             | IBUF             | INPUT     | LVCMOS33             |       |          |      |              |          | 0 / 0    |
+| phy_mii_clk                        | IOB              | OUTPUT    | LVCMOS33             |       | 12       | SLOW |              |          | 0 / 0    |
+| phy_mii_data                       | IBUF             | INPUT     | LVCMOS33             |       |          |      |              |          | 0 / 0    |
+| phy_rx_clk                         | IBUF             | INPUT     | LVCMOS33             |       |          |      |              |          | 0 / 0    |
+| phy_rx_data<0>                     | IBUF             | INPUT     | LVCMOS33             |       |          |      |              |          | 0 / 0    |
+| phy_rx_data<1>                     | IBUF             | INPUT     | LVCMOS33             |       |          |      |              |          | 0 / 0    |
+| phy_rx_data<2>                     | IBUF             | INPUT     | LVCMOS33             |       |          |      |              |          | 0 / 0    |
+| phy_rx_data<3>                     | IBUF             | INPUT     | LVCMOS33             |       |          |      |              |          | 0 / 0    |
+| phy_tx_clk                         | IBUF             | INPUT     | LVCMOS33             |       |          |      |              |          | 0 / 0    |
+| phy_tx_data<0>                     | IOB              | OUTPUT    | LVCMOS33             |       | 12       | SLOW |              |          | 0 / 0    |
+| phy_tx_data<1>                     | IOB              | OUTPUT    | LVCMOS33             |       | 12       | SLOW |              |          | 0 / 0    |
+| phy_tx_data<2>                     | IOB              | OUTPUT    | LVCMOS33             |       | 12       | SLOW |              |          | 0 / 0    |
+| phy_tx_data<3>                     | IOB              | OUTPUT    | LVCMOS33             |       | 12       | SLOW |              |          | 0 / 0    |
+| phy_tx_en                          | IOB              | OUTPUT    | LVCMOS33             |       | 12       | SLOW |              |          | 0 / 0    |
+| resetin                            | IBUF             | INPUT     | LVTTL                |       |          |      |              | PULLDOWN | 0 / 0    |
+| rs                                 | IOB              | OUTPUT    | LVCMOS33             |       | 4        | SLOW |              |          | 0 / 0    |
+| rw                                 | IOB              | OUTPUT    | LVCMOS33             |       | 4        | SLOW |              |          | 0 / 0    |
+| sdram_adr<0>                       | IOB              | OUTPUT    | LVCMOS25             |       | 12       | SLOW | OFF1         |          | 0 / 0    |
+| sdram_adr<1>                       | IOB              | OUTPUT    | LVCMOS25             |       | 12       | SLOW | OFF1         |          | 0 / 0    |
+| sdram_adr<2>                       | IOB              | OUTPUT    | LVCMOS25             |       | 12       | SLOW | OFF1         |          | 0 / 0    |
+| sdram_adr<3>                       | IOB              | OUTPUT    | LVCMOS25             |       | 12       | SLOW | OFF1         |          | 0 / 0    |
+| sdram_adr<4>                       | IOB              | OUTPUT    | LVCMOS25             |       | 12       | SLOW | OFF1         |          | 0 / 0    |
+| sdram_adr<5>                       | IOB              | OUTPUT    | LVCMOS25             |       | 12       | SLOW | OFF1         |          | 0 / 0    |
+| sdram_adr<6>                       | IOB              | OUTPUT    | LVCMOS25             |       | 12       | SLOW | OFF1         |          | 0 / 0    |
+| sdram_adr<7>                       | IOB              | OUTPUT    | LVCMOS25             |       | 12       | SLOW | OFF1         |          | 0 / 0    |
+| sdram_adr<8>                       | IOB              | OUTPUT    | LVCMOS25             |       | 12       | SLOW | OFF1         |          | 0 / 0    |
+| sdram_adr<9>                       | IOB              | OUTPUT    | LVCMOS25             |       | 12       | SLOW | OFF1         |          | 0 / 0    |
+| sdram_adr<10>                      | IOB              | OUTPUT    | LVCMOS25             |       | 12       | SLOW | OFF1         |          | 0 / 0    |
+| sdram_adr<11>                      | IOB              | OUTPUT    | LVCMOS25             |       | 12       | SLOW | OFF1         |          | 0 / 0    |
+| sdram_adr<12>                      | IOB              | OUTPUT    | LVCMOS25             |       | 12       | SLOW | OFF1         |          | 0 / 0    |
+| sdram_ba<0>                        | IOB              | OUTPUT    | LVCMOS25             |       | 12       | SLOW | OFF1         |          | 0 / 0    |
+| sdram_ba<1>                        | IOB              | OUTPUT    | LVCMOS25             |       | 12       | SLOW | OFF1         |          | 0 / 0    |
+| sdram_cas_n                        | IOB              | OUTPUT    | LVCMOS25             |       | 12       | SLOW | OFF1         |          | 0 / 0    |
+| sdram_cke                          | IOB              | OUTPUT    | LVCMOS25             |       | 12       | SLOW | OFF1         |          | 0 / 0    |
+| sdram_clk_n                        | IOB              | OUTPUT    | LVCMOS25             |       | 12       | SLOW | ODDR2        |          | 0 / 0    |
+| sdram_clk_p                        | IOB              | OUTPUT    | LVCMOS25             |       | 12       | SLOW | ODDR2        |          | 0 / 0    |
+| sdram_cs_n                         | IOB              | OUTPUT    | LVCMOS25             |       | 12       | SLOW | OFF1         |          | 0 / 0    |
+| sdram_dq<0>                        | IOB              | BIDIR     | LVCMOS25             |       | 12       | SLOW |              |          | 0 / 0    |
+| sdram_dq<1>                        | IOB              | BIDIR     | LVCMOS25             |       | 12       | SLOW |              |          | 0 / 0    |
+| sdram_dq<2>                        | IOB              | BIDIR     | LVCMOS25             |       | 12       | SLOW |              |          | 0 / 0    |
+| sdram_dq<3>                        | IOB              | BIDIR     | LVCMOS25             |       | 12       | SLOW |              |          | 0 / 0    |
+| sdram_dq<4>                        | IOB              | BIDIR     | LVCMOS25             |       | 12       | SLOW |              |          | 0 / 0    |
+| sdram_dq<5>                        | IOB              | BIDIR     | LVCMOS25             |       | 12       | SLOW |              |          | 0 / 0    |
+| sdram_dq<6>                        | IOB              | BIDIR     | LVCMOS25             |       | 12       | SLOW |              |          | 0 / 0    |
+| sdram_dq<7>                        | IOB              | BIDIR     | LVCMOS25             |       | 12       | SLOW |              |          | 0 / 0    |
+| sdram_dq<8>                        | IOB              | BIDIR     | LVCMOS25             |       | 12       | SLOW |              |          | 0 / 0    |
+| sdram_dq<9>                        | IOB              | BIDIR     | LVCMOS25             |       | 12       | SLOW |              |          | 0 / 0    |
+| sdram_dq<10>                       | IOB              | BIDIR     | LVCMOS25             |       | 12       | SLOW |              |          | 0 / 0    |
+| sdram_dq<11>                       | IOB              | BIDIR     | LVCMOS25             |       | 12       | SLOW |              |          | 0 / 0    |
+| sdram_dq<12>                       | IOB              | BIDIR     | LVCMOS25             |       | 12       | SLOW |              |          | 0 / 0    |
+| sdram_dq<13>                       | IOB              | BIDIR     | LVCMOS25             |       | 12       | SLOW |              |          | 0 / 0    |
+| sdram_dq<14>                       | IOB              | BIDIR     | LVCMOS25             |       | 12       | SLOW |              |          | 0 / 0    |
+| sdram_dq<15>                       | IOB              | BIDIR     | LVCMOS25             |       | 12       | SLOW |              |          | 0 / 0    |
+| sdram_dqm<0>                       | IOB              | OUTPUT    | LVCMOS25             |       | 12       | SLOW |              |          | 0 / 0    |
+| sdram_dqm<1>                       | IOB              | OUTPUT    | LVCMOS25             |       | 12       | SLOW |              |          | 0 / 0    |
+| sdram_dqs<0>                       | IOB              | OUTPUT    | LVCMOS25             |       | 12       | SLOW |              |          | 0 / 0    |
+| sdram_dqs<1>                       | IOB              | OUTPUT    | LVCMOS25             |       | 12       | SLOW |              |          | 0 / 0    |
+| sdram_ras_n                        | IOB              | OUTPUT    | LVCMOS25             |       | 12       | SLOW | OFF1         |          | 0 / 0    |
+| sdram_we_n                         | IOB              | OUTPUT    | LVCMOS25             |       | 12       | SLOW | OFF1         |          | 0 / 0    |
+| sw<0>                              | IBUF             | INPUT     | LVTTL                |       |          |      |              | PULLUP   | 0 / 0    |
+| sw<1>                              | IBUF             | INPUT     | LVTTL                |       |          |      |              | PULLUP   | 0 / 0    |
+| sw<2>                              | IBUF             | INPUT     | LVTTL                |       |          |      |              | PULLUP   | 0 / 0    |
+| sw<3>                              | IBUF             | INPUT     | LVTTL                |       |          |      |              | PULLUP   | 0 / 0    |
+| uart_rx                            | IBUF             | INPUT     | LVTTL                |       |          |      |              |          | 0 / 0    |
+| uart_rx_mon                        | IBUF             | INPUT     | LVTTL                |       |          |      |              |          | 0 / 0    |
+| uart_tx                            | IOB              | OUTPUT    | LVTTL                |       | 8        | SLOW | OFF1         |          | 0 / 0    |
+| uart_tx_mon                        | IOB              | OUTPUT    | LVTTL                |       | 8        | SLOW |              |          | 0 / 0    |
++---------------------------------------------------------------------------------------------------------------------------------------------------------+
+
+Section 7 - RPMs
+----------------
+
+Section 8 - Guide Report
+------------------------
+Guide not run on this design.
+
+Section 9 - Area Group and Partition Summary
+--------------------------------------------
+
+Partition Implementation Status
+-------------------------------
+
+  No Partitions were found in this design.
+
+-------------------------------
+
+Area Group Information
+----------------------
+
+  No area groups were found in this design.
+
+----------------------
+
+Section 10 - Timing Report
+--------------------------
+This design was not run using timing mode.
+
+Section 11 - Configuration String Details
+-----------------------------------------
+Use the "-detail" map option to print out Configuration Strings
+
+Section 12 - Control Set Information
+------------------------------------
+No control set information for this architecture.
+
+Section 13 - Utilization by Hierarchy
+-------------------------------------
+Use the "-detail" map option to print out the Utilization by Hierarchy section.

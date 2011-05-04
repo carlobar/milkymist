@@ -88,7 +88,7 @@ hpdmc_oddr16 oddr_dq(
 
 input_delay #(
 	.length(16),
-	.LUTs(150)
+	.LUTs(300)
 ) delay(
 	.clk(sys_clk),
 	.rst(rst),

@@ -1,0 +1,27 @@
+Release 12.1 - par M.53d (lin)
+Copyright (c) 1995-2010 Xilinx, Inc.  All rights reserved.
+
+Wed May  4 00:03:23 2011
+
+All signals are completely routed.
+
+WARNING:ParHelpers:362 - There are 1 sourceless signals in this design. This design will not pass the DRC check run by
+   Bitgen.
+
+   uart_tx_mon_OBUF
+WARNING:ParHelpers:361 - There are 11 loadless signals in this design. This design will cause Bitgen to issue DRC
+   warnings.
+
+   phy_col_IBUF
+   phy_crs_IBUF
+   phy_dv_IBUF
+   phy_mii_data_IBUF
+   phy_rx_clk_IBUF
+   phy_rx_data<0>_IBUF
+   phy_rx_data<1>_IBUF
+   phy_rx_data<2>_IBUF
+   phy_rx_data<3>_IBUF
+   phy_tx_clk_IBUF
+   uart_rx_mon_IBUF
+
+

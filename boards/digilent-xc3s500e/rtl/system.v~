@@ -360,8 +360,8 @@ wire	[31:0]	data_read_flash, addr_read, instr;
 wire	[3:0]	data_io;
 wire e_ , rs_, rw_;
 wire [5:0] slave_sel;
-assign led[5:2] = slave_sel;
-assign led[6] = cpudbus_we;
+assign led[6:2] = slave_sel;
+//assign led[6] = cpudbus_we;
 
 wire sdram_dq_t;
 wire [15:0] sdram_dq_mon;
@@ -369,6 +369,7 @@ wire [15:0] sdram_dq_mon;
 // Wishbone switch
 //---------------------------------------------------------------------------
 conbus #(
+	.s_addr_w(4),
 	.s_addr_w(4),
 	.s0_addr(4'b0000),	// norflash	0x00000000
 	.s1_addr(4'b0010),	// bram		0x20000000
@@ -458,6 +459,15 @@ conbus #(
 	.s2_cyc_o(brg_cyc),
 	.s2_stb_o(brg_stb),
 	.s2_ack_i(brg_ack),
+	// Slave 4
+	.s4_dat_i(32'bx),
+	.s4_dat_o(),
+	.s4_adr_o(),
+	.s4_we_o(),
+	.s4_sel_o(),
+	.s4_cyc_o(),
+	.s4_stb_o(),
+	.s4_ack_i(1'b0),	
 	// Slave 3
 	.s3_dat_i(csrbrg_dat_r),
 	.s3_dat_o(csrbrg_dat_w),
@@ -465,17 +475,10 @@ conbus #(
 	.s3_we_o(csrbrg_we),
 	.s3_cyc_o(csrbrg_cyc),
 	.s3_stb_o(csrbrg_stb),
-	.s3_ack_i(csrbrg_ack),
-	// Slave 4
-	.s4_dat_i(32'bx),
-	.s4_dat_o(uart_dat_w),
-	.s4_adr_o(uart_adr),
-	.s4_we_o(uart_we),
-	.s4_sel_o(uart_sel),
-	.s4_cyc_o(uart_cyc),
-	.s4_stb_o(uart_stb),
-	.s4_ack_i(1'b0)
+	.s3_ack_i(csrbrg_ack)
+
 );
+
 
 //------------------------------------------------------------------
 // CSR bus
@@ -993,8 +996,8 @@ uart #(
 	.rx_irq(uartrx_irq),
 	.tx_irq(uarttx_irq),
 	
-	.uart_rxd(uart_rx),
-	.uart_txd(uart_tx)
+	.uart_rx(uart_rx),
+	.uart_tx(uart_tx)
 );
 
 /*

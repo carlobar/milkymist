@@ -436,8 +436,8 @@ config:
 	mvhi	r10, hi(0x00000100)		//max dqs
 	ori	r10, r10, lo(0x00000100)
 	
-	mvhi	r11, hi(0x00000096)		//max delay
-	ori	r11, r11, lo(0x00000096)	
+	mvhi	r11, hi(0x0000012c)		//max delay
+	ori	r11, r11, lo(0x0000012c)	
 
 	mvhi	r12, hi(0x00000000)		// increment or decrement
 	ori	r12, r12, lo(0x00000000)	
