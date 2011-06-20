@@ -4,6 +4,7 @@ source setup.inc
 BASEDIR=`pwd`
 LOGFILEHOST=$BASEDIR/tools.log
 LOGFILE=$BASEDIR/synthesis.log
+export  XIL_PLACE_ALLOW_LOCAL_BUFG_ROUTING=1
 
 echo "================================================================================"
 echo "Building Milkymist bitstream file"

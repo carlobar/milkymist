@@ -20,9 +20,13 @@
 module ddram #(
 	parameter csr_addr = 4'h0
 ) (
-	input sys_clk,
+	input clk_in,
+	input clk_fb,
 	input sys_clk_n,
+	input sys_clk,
+
 	input sys_rst,
+	input rst_in,
 	
 	/* Configuration interface */
 	input [13:0] csr_a,
@@ -53,14 +57,33 @@ module ddram #(
 	inout [15:0] sdram_dq,
 	inout [1:0] sdram_dqs,
 	output sdram_dq_t,
-	output [15:0] sdram_dq_mon
+	output [15:0] sdram_dq_mon,
+	output [1:0] sdram_dqs_mon,
+	output [31:0] di_a_mon,
+	output [31:0] di_buf_mon
 );
 
+
+reg dcm_rst;
+
 `ifndef SIMULATION
+
+
+
 wire dqs_clk_dcm;
 wire dqs_clk_n_dcm;
 wire dqs_clk;
 wire dqs_clk_n;
+
+/*
+wire sys_clk_dcm;
+wire sys_clk_n_dcm;
+*/
+/*
+wire sys_clk;
+wire sys_clk_n;
+*/
+
 wire locked1 = 1'b1;
 //wire sdram_dq_t;
 
@@ -94,10 +117,114 @@ ODDR2 #(
 	.S(1'b0)
 );
 
+
+
+
 wire psen;
 wire psincdec;
 wire psdone;
+
 wire locked2;
+
+
+
+
+
+
+DCM_SP #(
+	.CLKDV_DIVIDE(`CLKDV_DIVIDE),		// 1.5,2.0,2.5,3.0,3.5,4.0,4.5,5.0,5.5,6.0,6.5
+
+	.CLKFX_DIVIDE(`CLKFX_DIVIDE),		// 1 to 32
+	.CLKFX_MULTIPLY(`CLKFX_MULTIPLY),		// 2 to 32
+	
+	.CLKIN_DIVIDE_BY_2("FALSE"),
+	.CLKIN_PERIOD(`CLOCK_PERIOD),
+	.CLKOUT_PHASE_SHIFT("FIXED"),
+	.CLK_FEEDBACK("1X"),
+	.DESKEW_ADJUST("SOURCE_SYNCHRONOUS"),
+	.DFS_FREQUENCY_MODE("LOW"),
+	.DLL_FREQUENCY_MODE("LOW"),
+	.DUTY_CYCLE_CORRECTION("TRUE"),
+	.PHASE_SHIFT(64),
+	.STARTUP_WAIT("TRUE")
+) clkgen_dqs (
+	.CLK0(dqs_clk_dcm),//sys_clk_dcm
+	.CLK90(),
+	.CLK180(dqs_clk_n_dcm),//sys_clk_n_dcm
+	.CLK270(),
+
+	.CLK2X(),
+	.CLK2X180(),
+
+	.CLKDV(),
+	.CLKFX(),
+	.CLKFX180(),
+	.LOCKED(),
+	.CLKFB(dqs_clk),//clk_fb
+	.CLKIN(clk_in),
+	.RST(dcm_rst)
+/*
+	.PSEN(psen),
+	.PSINCDEC(psincdec),
+	.PSDONE(psdone),
+	.PSCLK(psclk)
+*/	
+);
+BUFG b_dqs_p(
+	.I(dqs_clk_dcm),
+	.O(dqs_clk)
+);
+BUFG b_dqs_n(
+	.I(dqs_clk_n_dcm),
+	.O(dqs_clk_n)
+);
+
+/*
+BUFG b_sys_clk_p(
+	.I(sys_clk_dcm),
+	.O(sys_clk)
+);
+*/
+/*
+BUFG b_sys_clk_n(
+	.I(sys_clk_n_dcm),
+	.O(sys_clk_n)
+);
+*/
+/*
+BUFG b_dqs_0(
+	.I(dqs_clk_0_dcm),
+	.O(dqs_clk_0)
+);
+*/
+//assign dqs_clk_0 = dqs_clk_0_dcm;
+
+
+
+//---------------------------------------------------------
+//---------------------------------------------------------
+
+wire dqs_clk_delayed_dcm;
+wire dqs_clk_n_delayed_dcm;
+wire dqs_clk_delayed;
+wire dqs_clk_n_delayed;
+
+
+
+/*
+wire psclk;
+DDR_reg clock_ (
+	.Q(psclk),
+	.C0(dqs_clk_delayed),
+	.C1(dqs_clk_n_delayed),
+	.CE(1'b1),
+	.D0(1'b1),
+	.D1(1'b0),
+	.R(1'b0),
+	.S(1'b0)
+);
+*/
+
 DCM_SP #(
 	.CLKDV_DIVIDE(`CLKDV_DIVIDE),		// 1.5,2.0,2.5,3.0,3.5,4.0,4.5,5.0,5.5,6.0,6.5
 
@@ -108,17 +235,17 @@ DCM_SP #(
 	.CLKIN_PERIOD(`CLOCK_PERIOD),
 	.CLKOUT_PHASE_SHIFT("VARIABLE"),
 	.CLK_FEEDBACK("1X"),
-	.DESKEW_ADJUST("SYSTEM_SYNCHRONOUS"),
+	.DESKEW_ADJUST("SOURCE_SYNCHRONOUS"),
 	.DFS_FREQUENCY_MODE("LOW"),
 	.DLL_FREQUENCY_MODE("LOW"),
 	.DUTY_CYCLE_CORRECTION("TRUE"),
 	.PHASE_SHIFT(0),
-	.STARTUP_WAIT("FALSE")
-) clkgen_dqs (
-	.CLK0(),
-	.CLK90(dqs_clk_n_dcm),
-	.CLK180(),
-	.CLK270(dqs_clk_dcm),
+	.STARTUP_WAIT("TRUE")
+) clkgen_dqs_delayed (
+	.CLK0(dqs_clk_delayed_dcm),//sys_clk_dcm
+	.CLK90(),
+	.CLK180(dqs_clk_n_delayed_dcm),//sys_clk_n_dcm
+	.CLK270(),
 
 	.CLK2X(),
 	.CLK2X180(),
@@ -127,23 +254,45 @@ DCM_SP #(
 	.CLKFX(),
 	.CLKFX180(),
 	.LOCKED(locked2),
-	.CLKFB(dqs_clk),
-	.CLKIN(sys_clk),
-	.RST(sys_rst),
-	
+	.CLKFB(dqs_clk_delayed),//clk_fb
+	.CLKIN(clk_in),
+	.RST(dcm_rst),
 	.PSEN(psen),
 	.PSINCDEC(psincdec),
 	.PSDONE(psdone),
-	.PSCLK(sys_clk)
+	.PSCLK(dqs_clk_delayed)//psclk
 );
-BUFG b1(
-	.I(dqs_clk_dcm),
-	.O(dqs_clk)
+BUFG b_dqs_p_delayed(
+	.I(dqs_clk_delayed_dcm),
+	.O(dqs_clk_delayed)
 );
-BUFG b2(
-	.I(dqs_clk_n_dcm),
-	.O(dqs_clk_n)
+BUFG b_dqs_n_delayed(
+	.I(dqs_clk_n_delayed_dcm),
+	.O(dqs_clk_n_delayed)
 );
+
+
+//---------------------------------------------------------
+//---------------------------------------------------------
+
+
+
+reg [19:0] rst_cnt;
+//reg dcm_rst;
+initial rst_cnt <= 20'h0000a;
+//initial sys_rst <= 1'b1;
+always @(posedge sys_clk) begin
+	if(rst_in)
+		rst_cnt <= 20'h0000a;
+	else if(rst_cnt != 20'd0)
+		rst_cnt <= rst_cnt - 20'd1;
+	dcm_rst <= (rst_cnt < 20'd4) & (rst_cnt != 20'd0);
+end
+
+
+
+
+
 `else
 reg dqs_clk;
 wire dqs_clk_n;
@@ -164,8 +313,13 @@ hpdmc #(
 ) hpdmc (
 	.sys_clk(sys_clk),
 	.sys_clk_n(sys_clk_n),
+	
 	.dqs_clk(dqs_clk),
 	.dqs_clk_n(dqs_clk_n),
+
+	.dqs_clk_delayed(dqs_clk_delayed),
+	.dqs_clk_n_delayed(dqs_clk_n_delayed),
+
 	.sys_rst(sys_rst),
 
 	.csr_a(csr_a),
@@ -192,13 +346,20 @@ hpdmc #(
 	.sdram_dq(sdram_dq),
 	.sdram_dqs(sdram_dqs),
 	
+
 	.dqs_psen(psen),
 	.dqs_psincdec(psincdec),
 	.dqs_psdone(psdone),
-
+`ifndef SIMULATION_DDR
 	.pll_stat({locked2, locked1}),
+`else
+	.pll_stat({1'b1, 1'b1}),
+`endif
 	.sdram_dq_t(sdram_dq_t),
-	.sdram_dq_mon(sdram_dq_mon)
+	.sdram_dq_mon(sdram_dq_mon),
+	.sdram_dqs_mon(sdram_dqs_mon),
+	.di_a_mon(di_a_mon),
+	.di_buf_mon(di_buf_mon)
 );
 
 endmodule

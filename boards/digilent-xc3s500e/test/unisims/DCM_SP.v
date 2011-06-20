@@ -1040,9 +1040,9 @@ end
 
 always @(clk0_out) begin
     CLK0 <= #(clkout_delay) clk0_out && (clkfb_type != 2'b00);
-    CLK90 <= #(clkout_delay + CLKIN_PERIOD / 4) clk0_out && !dll_mode_type && (clkfb_type != 2'b00);//period
+    CLK90 <= #(clkout_delay + CLKIN_PERIOD*1000 / 4) clk0_out && !dll_mode_type && (clkfb_type != 2'b00);//period
     CLK180 <= #(clkout_delay) ~clk0_out && (clkfb_type != 2'b00);
-    CLK270 <= #(clkout_delay + CLKIN_PERIOD / 4) ~clk0_out && !dll_mode_type && (clkfb_type != 2'b00);//period
+    CLK270 <= #(clkout_delay + CLKIN_PERIOD*1000 / 4) ~clk0_out && !dll_mode_type && (clkfb_type != 2'b00);//period
   end
 
 always @(clk2x_out) begin

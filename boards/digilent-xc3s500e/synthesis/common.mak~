@@ -9,13 +9,13 @@ load: build/system.bit
 	cd build && impact -batch ../load.cmd
 
 build/system.ncd: build/system.ngd
-	cd build && map system.ngd
+	cd build && map -logic_opt on -cm speed -timing -ol high -xe n system.ngd
 
 build/system-routed.ncd: build/system.ncd
 	cd build && par -ol high -xe n -w system.ncd system-routed.ncd
 
 build/system.bit: build/system-routed.ncd
-	cd build && bitgen -w system-routed.ncd system.bit
+	cd build && bitgen -d -w system-routed.ncd system.bit
 
 build/system-routed.xdl: build/system-routed.ncd
 	cd build && xdl -ncd2xdl system-routed.ncd system-routed.xdl

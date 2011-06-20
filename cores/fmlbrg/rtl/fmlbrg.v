@@ -159,7 +159,7 @@ assign datamem_a = { index_load ? index : index_r, bcounter_next };
 reg datamem_we_wb;
 reg datamem_we_fml;
 
-assign datamem_we = ({4{datamem_we_fml}} & 4'hff)
+assign datamem_we = ({4{datamem_we_fml}} & 4'hf)
 	|({4{datamem_we_wb &  wb_adr_i[2]}} & {wb_sel_i})
 	|({4{datamem_we_wb & ~wb_adr_i[2]}} & {wb_sel_i});
 

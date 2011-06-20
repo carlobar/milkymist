@@ -18,16 +18,20 @@
 module hpdmc_ddrio(
 	input sys_clk,
 	input sys_clk_n,
+
 	input dqs_clk,
 	input dqs_clk_n,
+
+	input dqs_clk_delayed,
+	input dqs_clk_n_delayed,
 	
 	input rst,
 
-	input direction,
+//	input direction,
 	input direction_r,
 	input [3:0] mo,
 	input [31:0] do,
-	output [31:0] di,
+	output reg [31:0] di,
 	
 	output [1:0] sdram_dqm,
 	inout [15:0] sdram_dq,
@@ -36,10 +40,19 @@ module hpdmc_ddrio(
 	input idelay_rst,
 	input idelay_ce,
 	input idelay_inc,
-	input idelay_cal,
+//	input idelay_cal,
+
+/*
+	input dqs_psen,
+	input dqs_psincdec,
+	output dqs_psdone,
+*/
 	
 	output sdram_dq_t_o,
-	output [15:0] sdram_dq_mon
+	output [15:0] sdram_dq_mon,
+	output [1:0] sdram_dqs_mon,
+	output [31:0] di_a_mon,
+	output [31:0] di_buf_mon
 );
 
 
@@ -47,73 +60,219 @@ wire [15:0] sdram_dq_t;
 wire [15:0] sdram_dq_out;
 wire [15:0] sdram_dq_in;
 wire [15:0] sdram_dq_in_delayed;
+wire [1:0] sdram_dqs_out_delayed;
+wire [1:0] sdram_dqs_in_delayed;
+wire [1:0] sdram_dqs_t;
+wire [1:0] sdram_dqs_out;
+wire [1:0] sdram_dqs_in;
+wire [31:0] di_buf;
+
+// Monitor
+wire [1:0] sdram_dqs_out_mon;
+wire [15:0] sdram_dq_out_mon;
+
+wire out_0, out_0_b, out_1, out_2;
+reg enable_dqs_in;
+
+assign sdram_dq_t_o = sdram_dq_t[0];//enable_dqs_in;//
 
 
-assign sdram_dq_t_o = sdram_dq_t;
-assign sdram_dq_mon = sdram_dq_out;
+
+
+assign sdram_dq_mon = (~sdram_dq_t[0] | direction_r) ? sdram_dq_out_mon : di_buf;//sdram_dq_in;//
+assign sdram_dqs_mon[0] = (~sdram_dq_t[0] | direction_r) ? sdram_dqs_out_mon[0] : sdram_dqs_in[0];//out_2;
+assign sdram_dqs_mon[1] = (~sdram_dq_t[0] | direction_r) ? sdram_dqs_out_mon[1] : sdram_dqs_in[1];//_delayed
+//assign sdram_dqs_mon[0] = di_buf == 32'habadface;
+//assign sdram_dqs_mon[1] = di == 32'habadface;
+
+reg [31:0] di_a, di_b;
+
+
+assign di_buf_mon = di_buf;
+assign di_a_mon = di_b;
+
+/*
+always @(posedge sys_clk) begin//sys_clk_n
+	if (rst)
+		di_a <= 32'b0;
+	else if (enable_dqs_in == 1'b1) begin //
+		if (sdram_dq_t[0] == 1'b1)
+			di_a <= di_buf;
+		else
+			di_a <= di_a;
+	end else 
+		di_a <= di_a;
+end
+*/
+always @(posedge dqs_clk_delayed) begin // sys_clk_n
+	if (rst)
+		di_b <= 32'b0;
+	else
+		di_b <= di_buf;
+end
+
+always @(posedge sys_clk) begin//sys_clk
+	if (rst)
+		di <= 32'b0;
+	else
+		di <= di_b;//di_a; //
+end
+
 /******/
 /* DQ */
 /******/
 
-
+/*
 hpdmc_iobuf16 iobuf_dq(
 	.T(sdram_dq_t),
 	.I(sdram_dq_out),
 	.O(sdram_dq_in),
 	.IO(sdram_dq)
 );
+*/
+
+assign sdram_dq[0] = (~sdram_dq_t[0] | direction_r) ? sdram_dq_out[0] : 1'bz;
+assign sdram_dq[1] = (~sdram_dq_t[1] | direction_r) ? sdram_dq_out[1] : 1'bz;
+assign sdram_dq[2] = (~sdram_dq_t[2] | direction_r) ? sdram_dq_out[2] : 1'bz;
+assign sdram_dq[3] = (~sdram_dq_t[3] | direction_r) ? sdram_dq_out[3] : 1'bz;
+assign sdram_dq[4] = (~sdram_dq_t[4] | direction_r) ? sdram_dq_out[4] : 1'bz;
+assign sdram_dq[5] = (~sdram_dq_t[5] | direction_r) ? sdram_dq_out[5] : 1'bz;
+assign sdram_dq[6] = (~sdram_dq_t[6] | direction_r) ? sdram_dq_out[6] : 1'bz;
+assign sdram_dq[7] = (~sdram_dq_t[7] | direction_r) ? sdram_dq_out[7] : 1'bz;
+assign sdram_dq[8] = (~sdram_dq_t[8] | direction_r) ? sdram_dq_out[8] : 1'bz;
+assign sdram_dq[9] = (~sdram_dq_t[9] | direction_r) ? sdram_dq_out[9] : 1'bz;
+assign sdram_dq[10] = (~sdram_dq_t[10] | direction_r) ? sdram_dq_out[10] : 1'bz;
+assign sdram_dq[11] = (~sdram_dq_t[11] | direction_r) ? sdram_dq_out[11] : 1'bz;
+assign sdram_dq[12] = (~sdram_dq_t[12] | direction_r) ? sdram_dq_out[12] : 1'bz;
+assign sdram_dq[13] = (~sdram_dq_t[13] | direction_r) ? sdram_dq_out[13] : 1'bz;
+assign sdram_dq[14] = (~sdram_dq_t[14] | direction_r) ? sdram_dq_out[14] : 1'bz;
+assign sdram_dq[15] = (~sdram_dq_t[15] | direction_r) ? sdram_dq_out[15] : 1'bz;
 
 
-hpdmc_oddr16 oddr_dq_t(
+assign sdram_dq_in = sdram_dq;
+
+
+///home/beren/git/ddr/wb_ddr/sim/unisims/FDDRRSE.v
+// camiarlo por 1 solo
+hpdmc_out_ddr16 oddr_dq_t(
 	.Q(sdram_dq_t),
-	.C0(sys_clk),
-	.C1(sys_clk_n),
+	.C0(dqs_clk_n),
+	.C1(dqs_clk),
 	.CE(1'b1),
 	.D0({16{~direction_r}}),
 	.D1({16{~direction_r}}),
+	.R(rst),
+	.S(1'b0)
+);
+
+hpdmc_fddrrse16 oddr_dq(
+	.Q(sdram_dq_out),
+	.C0(dqs_clk_n),
+	.C1(dqs_clk),
+	.CE(1'b1),
+	.D0(do[15:0]),
+	.D1(do[31:16]),
 	.R(1'b0),
 	.S(1'b0)
 );
 
-hpdmc_oddr16 oddr_dq(
-	.Q(sdram_dq_out),
-	.C0(sys_clk),
-	.C1(sys_clk_n),
-	.CE(1'b1),
-	.D0(do[31:16]),
-	.D1(do[15:0]),
-	.R(1'b0),
-	.S(1'b0)
-);
+
+/*
 
 input_delay #(
 	.length(16),
-	.LUTs(300)
+	.LUTs(35)
 ) delay(
 	.clk(sys_clk),
 	.rst(rst),
-	.data_in(sdram_dq_in),
+	.data_in(sdram_dq_in),//dq_in
 	.data_out(sdram_dq_in_delayed),
 	.idelay_rst(idelay_rst),
 	.idelay_ce(idelay_ce),
 	.idelay_inc(idelay_inc)
 );
+*/
 
-
-
-
+/*
+input_delay #(
+	.length(16),
+	.LUTs(35)
+) delay_dq(
+	.clk(sys_clk),
+	.rst(rst),
+	.data_in(sdram_dq_in),//dq_in
+	.data_out(sdram_dq_in_delayed),
+	.idelay_rst(1'b0),
+	.idelay_ce(dqs_psen),
+	.idelay_inc(dqs_psincdec),
+	.idelay_done(dqs_psdone)
+);
+*/
+/*
 hpdmc_iddr16 iddr_dq(
-	.Q0(di[15:0]),
-	.Q1(di[31:16]),
-	.C0(sys_clk),
-	.C1(sys_clk_n),
+	.Q0(di_buf[15:0]),
+	.Q1(di_buf[31:16]),
+	.C0(dqs_clk_n),//sdram_dqs_in_delayed[1]
+	.C1(dqs_clk),//~sdram_dqs_in_delayed[0]
 	.CE(1'b1),
 	.D(sdram_dq_in_delayed),
+	.R(rst),
+	.S(1'b0)
+);
+*/
+
+hpdmc_iddr8 iddr_dq_lb(
+	.Q0(di_buf[7:0]),
+	.Q1(di_buf[23:16]),
+	.C0(dqs_clk_delayed),//sdram_dqs_in_delayed[0]////sdram_dqs_out
+	.C1(dqs_clk_n_delayed),//~sdram_dqs_in_delayed[1]////~sdram_dqs_out
+	.CE(1'b1),
+	.D(sdram_dq_in[7:0]),
 	.R(1'b0),
 	.S(1'b0)
 );
 
+hpdmc_iddr8 iddr_dq_ub(
+	.Q0(di_buf[15:8]),
+	.Q1(di_buf[31:24]),
+	.C0(dqs_clk_delayed),//sdram_dqs_in_delayed[0]////sdram_dqs_out
+	.C1(dqs_clk_n_delayed),//~sdram_dqs_in_delayed[1]////~sdram_dqs_out
+	.CE(1'b1),
+	.D(sdram_dq_in[15:8]),
+	.R(1'b0),
+	.S(1'b0)
+);
 
+/*
+input_delay #(
+	.length(2),
+	.LUTs(30)
+) delay_dqs(
+	.clk(sys_clk),
+	.rst(rst),
+	.data_in(sdram_dqs_in),//dq_in
+	.data_out(sdram_dqs_in_delayed),
+	.idelay_rst(1'b0),
+	.idelay_ce(dqs_psen),
+	.idelay_inc(dqs_psincdec),
+	.idelay_done(dqs_psdone)
+);
+*/
+/*
+
+input_delay #(
+	.length(2),
+	.LUTs(35)
+) delay(
+	.clk(sys_clk),
+	.rst(rst),
+	.data_in(sdram_dqs_in),//dq_in
+	.data_out(sdram_dqs_in_delayed),
+	.idelay_rst(idelay_rsst),
+	.idelay_ce(idelay_ce),
+	.idelay_inc(idelay_inc)
+);
+*/
 //assign sdram_dq_in_delayed_buf = direction_r ? sdram_dq_in_delayed : 16'bz;
 
 
@@ -137,7 +296,7 @@ hpdmc_oddr2 oddr_dqm(
 	.CE(1'b1),
 	.D0(mo[3:2]),
 	.D1(mo[1:0]),
-	.R(1'b0),
+	.R(rst),
 	.S(1'b0)
 );
 
@@ -145,34 +304,34 @@ hpdmc_oddr2 oddr_dqm(
 /* DQS */
 /*******/
 
-wire [1:0] sdram_dqs_t;
-wire [1:0] sdram_dqs_out;
 
-wire q1, q2;
+
+wire q1;//, q2;
 assign q1 = sdram_dqs_t[0] ~^ direction_r;
 
-/*
-BUFG buffer_q1 (.O (q2),
-
-                    .I (sdram_dqs_out && {2{q1}}));
-*/
-hpdmc_obuft2 obuft_dqs(
-	.T(sdram_dqs_t),
-	.I(sdram_dqs_out),
-	.O(sdram_dqs)
-);
 
 
-hpdmc_oddr2 oddr_dqs_t(
+
+assign sdram_dqs = (~sdram_dqs_t[0]) ? sdram_dqs_out: 2'bz; //_delayed
+assign sdram_dqs_in = sdram_dqs;//(sdram_dqs_t[0]) ? sdram_dqs: 2'bz; //
+
+/// reemplazar por 1 solo 1
+hpdmc_out_ddr2 out_ddr_dqs_t(
 	.Q(sdram_dqs_t),
-	.C0(sys_clk),//dqs
-	.C1(sys_clk_n),
+	.C0(dqs_clk),//dqs
+	.C1(dqs_clk_n),
 	.CE(1'b1),
 	.D0({2{~direction_r}}),
 	.D1({2{~direction_r}}),
-	.R(1'b0),
+	.R(rst),
 	.S(1'b0)
 );
+
+
+
+
+
+
 /*
 wire dat1, out_1, out_2;
 assign dat1 = direction_r ^ q1;
@@ -186,26 +345,119 @@ flip_flop_d ffD1(
 	.set(1'b0),
 	.Q(out_1)
 );
+
 */
-/*
-flip_flop_d ffD2(
-	.D(out_1),
-	.clk(dqs_clk),
+
+
+always @(posedge sys_clk_n) begin
+	if(rst)
+		enable_dqs_in <= 1'b0;
+	else 
+		enable_dqs_in <= (out_0 | out_0_b) & out_1;// & out_2;//
+end
+
+flip_flop_d ffD0(
+	.D(~sdram_dqs_in[1]),
+	.clk(sys_clk_n),
 	.ce(1'b1),
-	.reset(1'b0),
+	.reset(rst),
+	.set(1'b0),
+	.Q(out_0)
+);
+
+flip_flop_d ffD0_b(
+	.D(out_0),
+	.clk(sys_clk_n),
+	.ce(1'b1),
+	.reset(rst),
+	.set(1'b0),
+	.Q(out_0_b)
+);
+
+flip_flop_d ffD1(
+	.D(~sdram_dqs_in[1]),
+	.clk(dqs_clk_n),
+	.ce(1'b1),
+	.reset(rst),
+	.set(1'b0),
+	.Q(out_1)
+);
+
+flip_flop_d ffD2(
+	.D(sdram_dqs_in[1]),
+	.clk(sys_clk_n),
+	.ce(1'b1),
+	.reset(rst),
 	.set(1'b0),
 	.Q(out_2)
 );
-*/
-hpdmc_oddr2 oddr_dqs(
+
+
+
+hpdmc_oddr2 out_ddr_dqs(
 	.Q(sdram_dqs_out),
-	.C0(dqs_clk),//dqs
-	.C1(dqs_clk_n),
+	.C0(sys_clk),//dqs
+	.C1(sys_clk_n),
 	.CE(1'b1),
 	.D0(2'b11),// & ~{2{q1}} & ~{2{out_1}}),//&& {2{~direction_r}} 
 	.D1(2'b00),
-	.R(1'b0),
+	.R(rst),
 	.S(1'b0)
 );
+
+
+
+
+
+input_delay #(
+	.length(2),
+	.LUTs(30)
+) delay(
+	.clk(sys_clk),
+	.rst(rst),
+	.data_in(sdram_dqs_out),//dq_in
+	.data_out(sdram_dqs_out_delayed),
+	.idelay_rst(idelay_rst),
+	.idelay_ce(idelay_ce),
+	.idelay_inc(idelay_inc)
+);
+
+
+
+
+
+
+
+
+// monitor
+
+hpdmc_out_ddr2 out_ddr_dqs_mon(
+	.Q(sdram_dqs_out_mon),
+	.C0(sys_clk),//dqs
+	.C1(sys_clk_n),
+	.CE(1'b1),
+	.D0(2'b11),// & ~{2{q1}} & ~{2{out_1}}),//&& {2{~direction_r}} 
+	.D1(2'b00),
+	.R(rst),
+	.S(1'b0)
+);
+
+
+hpdmc_out_ddr16 oddr_dq_mon(
+	.Q(sdram_dq_out_mon),
+	.C0(dqs_clk),
+	.C1(dqs_clk_n),
+	.CE(1'b1),
+	.D0(do[15:0]),
+	.D1(do[31:16]),
+	.R(rst),
+	.S(1'b0)
+);
+
+
+
+
+
+
 
 endmodule

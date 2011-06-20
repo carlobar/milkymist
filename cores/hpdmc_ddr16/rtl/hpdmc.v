@@ -38,6 +38,9 @@ module hpdmc #(
 	input dqs_clk,
 	input dqs_clk_n,
 	
+	input dqs_clk_delayed,
+	input dqs_clk_n_delayed,
+
 	input sys_rst,
 	
 	/* Control interface */
@@ -74,14 +77,19 @@ module hpdmc #(
 	inout [1:0] sdram_dqs,
 	
 	/* Interface to the DCM generating DQS */
+
 	output dqs_psen,
 	output dqs_psincdec,
 	input dqs_psdone,
 
+
 	input [1:0] pll_stat,
 
 	output sdram_dq_t,
-	output [15:0] sdram_dq_mon
+	output [15:0] sdram_dq_mon,
+	output [1:0] sdram_dqs_mon,
+	output [31:0] di_a_mon,
+	output [31:0] di_buf_mon
 );
 
 /* Register all control signals, leaving the possibility to use IOB registers */
@@ -93,7 +101,7 @@ wire sdram_ras_n_r;
 wire [12:0] sdram_adr_r;
 wire [1:0] sdram_ba_r;
 
-always @(posedge sys_clk) begin
+always @(posedge sys_clk_n) begin
 	sdram_cke <= sdram_cke_r;
 	sdram_cs_n <= sdram_cs_n_r;
 	sdram_we_n <= sdram_we_n_r;
@@ -201,6 +209,7 @@ hpdmc_mgmt #(
 	.sdram_columndepth(sdram_columndepth)
 ) mgmt (
 	.sys_clk(sys_clk),
+	.sys_clk_n(sys_clk_n),
 	.sdram_rst(sdram_rst),
 	
 	.tim_rp(tim_rp),
@@ -279,12 +288,16 @@ hpdmc_datactl datactl(
 hpdmc_ddrio ddrio(
 	.sys_clk(sys_clk),
 	.sys_clk_n(sys_clk_n),
+
 	.dqs_clk(dqs_clk),
 	.dqs_clk_n(dqs_clk_n),
 
+	.dqs_clk_delayed(dqs_clk_delayed),
+	.dqs_clk_n_delayed(dqs_clk_n_delayed),
+
 	.rst(sys_rst),	
 
-	.direction(direction),
+	//.direction(direction),
 	.direction_r(direction_r),
 	/* Bit meaning is the opposite between
 	 * the FML selection signal and SDRAM DQM pins.
@@ -300,8 +313,17 @@ hpdmc_ddrio ddrio(
 	.idelay_rst(idelay_rst),
 	.idelay_ce(idelay_ce),
 	.idelay_inc(idelay_inc),
+/*
+	.dqs_psen(dqs_psen),
+	.dqs_psincdec(dqs_psincdec),
+	.dqs_psdone(dqs_psdone),
+*/
+
 	.sdram_dq_t_o(sdram_dq_t),
-	.sdram_dq_mon(sdram_dq_mon)
+	.sdram_dq_mon(sdram_dq_mon),
+	.sdram_dqs_mon(sdram_dqs_mon),
+	.di_a_mon(di_a_mon),
+	.di_buf_mon(di_buf_mon)
 );
 
 endmodule

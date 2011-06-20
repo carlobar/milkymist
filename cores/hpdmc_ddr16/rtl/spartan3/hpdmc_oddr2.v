@@ -41,7 +41,7 @@ ODDR2_fixed #(
 	.DDR_ALIGNMENT(DDR_ALIGNMENT),
 	.INIT(INIT),
 	.SRTYPE(SRTYPE)
-) oddr0 (
+) oddr0_ (
 	.Q(Q[0]),
 	.C0(C0),
 	.C1(C1),
@@ -55,7 +55,7 @@ ODDR2_fixed #(
 	.DDR_ALIGNMENT(DDR_ALIGNMENT),
 	.INIT(INIT),
 	.SRTYPE(SRTYPE)
-) oddr1 (
+) oddr1_ (
 	.Q(Q[1]),
 	.C0(C0),
 	.C1(C1),

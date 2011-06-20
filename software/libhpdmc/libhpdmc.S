@@ -331,7 +331,7 @@ mancal_loop:
 	be	r1, r2, inc_dqs_phase
 	mvu	r2, 'D'
 	be	r1, r2, dec_dqs_phase
-	mvu	r2, 't'10
+	mvu	r2, 't'//10
 	be	r1, r2, small_test
 	mvu	r2, 'T'
 	be	r1, r2, big_test
@@ -421,7 +421,7 @@ boot:
 	mvhi	r1, hi(CSR_VGA_RESET)
 	ori	r1, r1, lo(CSR_VGA_RESET)
 	mvi	r2, VGA_RESET
-	sw 	(r1+0), r2
+	//sw 	(r1+0), r2
 	RETURN(LIBHPDMC_SUCCESS)
 
 //////////////////////////////////////////////////////////////////////////
@@ -433,11 +433,11 @@ config:
 	mvhi	r16, hi(0x00000000)		//delay counter
 	ori	r16, r16, lo(0x00000000)	
 
-	mvhi	r10, hi(0x00000100)		//max dqs
-	ori	r10, r10, lo(0x00000100)
+	mvhi	r10, hi(0x000000ff)		//max dqs
+	ori	r10, r10, lo(0x000000ff)
 	
-	mvhi	r11, hi(0x0000012c)		//max delay
-	ori	r11, r11, lo(0x0000012c)	
+	mvhi	r11, hi(0x00000064)		//max delay
+	ori	r11, r11, lo(0x00000064)	
 
 	mvhi	r12, hi(0x00000000)		// increment or decrement
 	ori	r12, r12, lo(0x00000000)	
@@ -475,8 +475,17 @@ recursive_conf:
 	PRINT(nl)
 	//PRINT(spacer)
 	//mvu	r1, 1
+
+// big test 
+/*	mvu	r1, 1
+	xor	r2, r2, r2
+*/
+// small test
+
 	xor 	r1, r1, r1
 	xor	r2, r2, r2
+
+//	calli	recursive_memtest
 	calli	memtest
 	bne	r1, r0, print_success
 
@@ -488,15 +497,23 @@ recursive_conf:
 	mvhi r19, hi(0x80004004)
 	ori  r19, r19, lo(0x80004004)
 	sw   (r19+0), r6
-	mv	r1, r3
+
 */
-	//calli	printint
-	//PRINT(nl)
-
-
+	
+/*
+	mv	r1, r3
+	calli	printint
+	PRINT(nl)
+*/
+/*
+loop_conf:
+	nop
+	nop
+	bi loop_conf
+*/
 	
 	addi	r15, r15, 1
-	be	r15, r10, inc_delay
+	be	r15, r10, inc_delay		///*****
 	bne	r12, r0, dec_dqs
 
 
@@ -575,23 +592,40 @@ getkey:
  */
 memtest:
 
-	/*write and read memory*/
-	// primera escritura
+
 	mvhi r19, hi(0x40000000)
 	ori  r19, r19, lo(0x40000000)
 
-	mvhi r4, hi(0xabadface)
-	ori  r4, r4, lo(0xabadface)
+	mvhi r4, hi(0xcafebabe)
+	ori  r4, r4, lo(0xcafebabe)
+	mvhi r5, hi(0x00000000)
+	ori  r5, r5, lo(0x00000000)
+	mvhi r6, hi(0x12345678)
+	ori  r6, r6, lo(0x12345678)
+	mvhi r7, hi(0xfacecafe)
+	ori  r7, r7, lo(0xfacecafe)
+	mvhi r8, hi(0x22222222)
+	ori  r8, r8, lo(0x22222222)
 	sw   (r19+0), r4		// almacenar dato en memoria
+	sw   (r19+1), r5		// almacenar dato en memoria
+	sw   (r19+2), r6		// almacenar dato en memoria
+	sw   (r19+3), r7		// almacenar dato en memoria
+	sw   (r19+4), r8		// almacenar dato en memoria
 
-	mvhi r19, hi(0x80001004)
-	ori  r19, r19, lo(0x80001004)
-	sw   (r19+0), r4		// visualizar dato en lcd
+	lw   r4, (r19+0)		// leer dato	
+	lw   r5, (r19+1)		// leer dato	
+	lw   r6, (r19+2)		// leer dato	
+	lw   r7, (r19+3)		// leer dato	
+	lw   r8, (r19+4)		// leer dato	
+
+
+	/*write and read memory*/
+	// visualizar dato en lcd
 
 	
 	// segunda escritura
-	mvhi r19, hi(0x40002000)
-	ori  r19, r19, lo(0x40002000)
+	mvhi r19, hi(0x40000020)
+	ori  r19, r19, lo(0x40000020)
 
 	mvhi r4, hi(0xcafebabe)
 	ori  r4, r4, lo(0xcafebabe)
@@ -602,24 +636,44 @@ memtest:
 	sw   (r19+0), r4		//visualizar dato en lcd
 
 
+
+	// primera escritura
+	mvhi r19, hi(0x40000000)
+	ori  r19, r19, lo(0x40000000)
+
+	mvhi r4, hi(0xabadface)
+	ori  r4, r4, lo(0xabadface)
+	sw   (r19+0), r4		// almacenar dato en memoria
+
+	mvhi r19, hi(0x80001004)
+	ori  r19, r19, lo(0x80001004)
+	sw   (r19+0), r4	
+
+
+
 		// tercera escritura
-	mvhi r19, hi(0x40002100)
-	ori  r19, r19, lo(0x40002100)
+	mvhi r19, hi(0x40000010)
+	ori  r19, r19, lo(0x40000010)
 
 	mvhi r4, hi(0x12345678)
 	ori  r4, r4, lo(0x12345678)
 	sw   (r19+0), r4		// almacenar dato en memoria
 
 
+
+	// enviar orden inicio de lectura
+	mvhi r4, hi(0xefecadab)	// commando 
+	ori  r4, r4, lo(0xefecadab)
+	mvhi r19, hi(0x80004004)	// almacenar insruccion en data_out_b
+	ori  r19, r19, lo(0x80004004)
+	sw   (r19+0), r4
+
+
 	// primera lectura
+
 	mvhi r19, hi(0x40000000)
 	ori  r19, r19, lo(0x40000000)
 	lw   r4, (r19+0)		// leer dato	
-
-	// segunda lectura
-	mvhi r19, hi(0x40002000)
-	ori  r19, r19, lo(0x40002000)
-	lw   r5, (r19+0)		// leer dato	
 
 
 	mvhi r19, hi(0x80004004)	// visualizar lectura en lcd
@@ -627,9 +681,21 @@ memtest:
 	sw   (r19+0), r4
 
 
+
+	// segunda lectura
+	mvhi r19, hi(0x40000020)
+	ori  r19, r19, lo(0x40000020)
+	lw   r5, (r19+0)		// leer dato	
+
+
+
+
 	mvhi r19, hi(0x80006004)	// visualizar lectura en lcd
 	ori  r19, r19, lo(0x80006004)
 	sw   (r19+0), r5
+
+
+
 
 //	bi	memtest
 /*
@@ -665,16 +731,17 @@ inc_delay_test:
 	/* 1. fill with pattern */
 	mvhi	r5, 0x4000	/* r5 - current address */
 	ori	r5, r5, lo(0x0000)
-	mvhi	r3, 0x0ff	/* r3 - remaining words */
-	ori	r3, r3, lo(0x0000)
+	mvhi	r3, 0x0	/* r3 - remaining words */
+	ori	r3, r3, lo(0x1000)
 	mv	r4, r3		/* r4 - number of words to test */
 	mv	r6, r2		/* r6 - current value of the PRNG */
 	mvhi	r7, hi(22695477)
 	ori	r7, r7, lo(22695477)
 	bne	r1, r0, patloop
-	mvhi	r3, 0x10
-	ori	r3, r3, lo(0x0000)
+	mvhi	r3, 0x0
+	ori	r3, r3, lo(0x1000)
 	mv	r4, r3
+
 patloop:
 	sw	(r5+0), r6
 	mul	r6, r6, r7
@@ -699,6 +766,29 @@ chkloop:
 	mvu	r1, 1
 	ret
 testfail:
+
+
+// print test info
+
+					// dato leido
+	mvhi r19, hi(0x80001004)
+	ori  r19, r19, lo(0x80001004)
+	sw   (r19+0), r4
+
+					// dato almacenado
+	mvhi r19, hi(0x80004004)	
+	ori  r19, r19, lo(0x80004004)
+	sw   (r19+0), r6
+
+					// remaining words
+	mvhi r19, hi(0x80005004)
+	ori  r19, r19, lo(0x80005004)
+	sw   (r19+0), r3
+					// address
+	mvhi r19, hi(0x80006004)	// visualizar lectura en lcd
+	ori  r19, r19, lo(0x80006004)
+	sw   (r19+0), r5
+
 
 /*
 	lw   r5, (r13+4)
@@ -766,7 +856,7 @@ fail:
 */
 //	PRINT(memtestfailed)
 
-
+/*
 
 	mvhi r19, hi(0x40001000)
 	ori  r19, r19, lo(0x40001000)
@@ -774,9 +864,144 @@ fail:
 	mvhi r4, hi(0xabadface)
 	ori  r4, r4, lo(0xabadface)
 	sw   (r19+0), r4		// almacenar dato en memoria
+*/
+
+
+
+	// primera lectura
+/*
+	mvhi r19, hi(0x40000040)
+	ori  r19, r19, lo(0x40000040)
+	lw   r4, (r19+0)		// leer dato	
+
+
+	mvhi r19, hi(0x80004004)	// visualizar lectura en lcd
+	ori  r19, r19, lo(0x80004004)
+	sw   (r19+0), r4
+
+
+
+	// segunda lectura
+	mvhi r19, hi(0x40000050)
+	ori  r19, r19, lo(0x40000050)
+	lw   r5, (r19+0)		// leer dato	
+
+
+
+
+	mvhi r19, hi(0x80006004)	// visualizar lectura en lcd
+	ori  r19, r19, lo(0x80006004)
+	sw   (r19+0), r5
+
+
+
+*/
+
 
 	xor	r1, r1, r1
 	ret
+
+/////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////
+recursive_memtest:
+/*
+	// segunda escritura
+	mvhi r19, hi(0x40002000)
+	ori  r19, r19, lo(0x40002000)
+
+	mvhi r4, hi(0xcafebabe)
+	ori  r4, r4, lo(0xcafebabe)
+	sw   (r19+0), r4		// almacenar dato en memoria
+
+	mvhi r19, hi(0x80005004)
+	ori  r19, r19, lo(0x80005004)
+	sw   (r19+0), r4		//visualizar dato en lcd
+
+
+	// segunda lectura
+	mvhi r19, hi(0x40002000)
+	ori  r19, r19, lo(0x40002000)
+	lw   r5, (r19+0)		// leer dato	
+
+	mvhi r19, hi(0x80006004)	// visualizar lectura en lcd
+	ori  r19, r19, lo(0x80006004)
+	sw   (r19+0), r5
+*/
+
+
+
+
+
+	/* 1. define parameters */
+	mvhi	r5, 0x4000	/* r5 - current address */
+	ori	r5, r5, lo(0x0000)
+	mvhi	r3, 0x0ff	/* r3 - remaining words */
+	ori	r3, r3, lo(0x0000)
+	mv	r4, r3		/* r4 - number of words to test */
+	mvhi	r7, hi(12345678)
+	ori	r7, r7, lo(12345678)	/*r7 - multiplier factor */
+
+
+store_data:
+	mv	r25, r5
+	mv 	r27, r7
+	mul	r26, r25, r27	// multiply curent address and 0x12345678
+	mv 	r6, r26
+	sw	(r5+0), r6		// store data
+	xor 	r8, r8, r8		// clear r8: verify position
+	
+verify_historial:
+
+	mv	r25, r8
+	mv 	r27, r7
+	mul	r26, r25, r27	// multiply curent address and 0x12345678
+	mv 	r20, r26
+	
+	lw   	r21, (r8+0)		// read address r8
+	bne	r21, r20, verify_error
+
+	be	r8, r5, store_new_data	// verify finished
+	bgeu	r8, r5, verify_error
+	addi	r8, r8, 4	
+	bi	verify_historial
+
+
+store_new_data:
+	addi 	r5, r5, 4
+	addi	r3, r3, -1
+	be	r0, r3, finish
+	bi	store_data
+
+finish:
+	//PRINT(memtestpassed)
+	mvu	r1, 1
+	ret
+
+
+verify_error:
+						// remaining words
+	mvhi r19, hi(0x80001004)
+	ori  r19, r19, lo(0x80001004)
+	sw   (r19+0), r3
+					// address
+	mvhi r19, hi(0x80004004)	// visualizar lectura en lcd
+	ori  r19, r19, lo(0x80004004)
+	sw   (r19+0), r5
+
+	xor	r1, r1, r1
+	ret
+
+
+
+
+calc_data: 
+	mul	r26, r25, r27	// multiply curent address and 0x12345678
+	ret
+
+
+
+
+
 
 #ifndef FEAT_NO_OUTPUT
 /* printint - prints an integer 0-999

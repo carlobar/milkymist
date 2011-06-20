@@ -16,6 +16,7 @@ VINCDIR= 				\
 	-I$(DIR)/unisims		\
 	-I$(BOARD_DIR)			\
 	-I$(BOARD_DIR)/../test/unisims	\
+	-I$(CORES_DIR)/vga_controller/rtl	\
 	-I$(CORES_DIR)/conbus/rtl	\
 	-I$(CORES_DIR)/fmlbrg/rtl	\
 	-I$(CORES_DIR)/fmlarb/rtl	\
@@ -44,6 +45,7 @@ SIM_SRC=						\
 	$(BOARD_DIR)/system_monitor.v		\
 	$(wildcard $(CORES_DIR)/16_bit_interface/rtl/*.v)		\
 	$(wildcard $(CORES_DIR)/conbus/rtl/*.v)		\
+	$(wildcard $(CORES_DIR)/vga_controller/rtl/*.v)		\
 	$(wildcard $(CORES_DIR)/csrbrg/rtl/*.v)		\
 	$(wildcard $(CORES_DIR)/lcd_2x16/rtl/*.v)	\
 	$(wildcard $(CORES_DIR)/monitor/rtl/*.v)	\
@@ -97,8 +99,13 @@ ${EXEC}: $(SRC) $(SIM_SRC) system_tb.v
 	rm -rf make.log
 	iverilog -Tmax -v -D SIMULATION_DDR $(VINCDIR) $(LIBDIR) -c $@.list -o ${EXEC} -s $@ >> make.log 2>&1
 
-
-
+vga_tb:  $(SRC) $(SIM_SRC) vga_tb.v
+	rm -f $@.list
+	@for i in `echo $^`; do \
+	    echo $$i >> $@.list; \
+	done
+	rm -rf make.log
+	iverilog -v -D SIMULATION_DDR $(VINCDIR) $(LIBDIR) -c $@.list -o vga_tb -s $@ >> make.log 2>&1
 bios.rom:
 	../../../tools/bin2hex $(BIN) bios.rom 35288
 

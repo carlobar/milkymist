@@ -37,19 +37,7 @@ module hpdmc_oddr2 #(
 	input S
 );
 
-wire [1:0] D_ff;
-
-flip_flop_d ffD0(
-	.D(D1[0]),
-	.clk(C0),
-	.ce(CE),
-	.reset(R),
-	.set(S),
-	.Q(D_ff[0])
-);
-
-
-ODDR2 #(
+ODDR2_fixed #(
 	.DDR_ALIGNMENT(DDR_ALIGNMENT),
 	.INIT(INIT),
 	.SRTYPE(SRTYPE)
@@ -59,21 +47,11 @@ ODDR2 #(
 	.C1(C1),
 	.CE(CE),
 	.D0(D0[0]),
-	.D1(D_ff[0]),
+	.D1(D1[0]),
 	.R(R),
 	.S(S)
 );
-
-flip_flop_d ffD1(
-	.D(D1[1]),
-	.clk(C0),
-	.ce(CE),
-	.reset(R),
-	.set(S),
-	.Q(D_ff[1])
-);
-
-ODDR2 #(
+ODDR2_fixed #(
 	.DDR_ALIGNMENT(DDR_ALIGNMENT),
 	.INIT(INIT),
 	.SRTYPE(SRTYPE)
@@ -83,7 +61,7 @@ ODDR2 #(
 	.C1(C1),
 	.CE(CE),
 	.D0(D0[1]),
-	.D1(D_ff[1]),
+	.D1(D1[1]),
 	.R(R),
 	.S(S)
 );

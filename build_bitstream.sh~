@@ -13,7 +13,7 @@ echo "Board:          $BOARD"
 echo "Log file:       $LOGFILE"
 echo "================================================================================"
 echo ""
-
+rm -f $LOGFILE
 echo -n "Building host utilities..."
 cd $BASEDIR/tools
 echo >> $LOGFILEHOST

@@ -37,6 +37,7 @@
 .section    .text, "ax", @progbits
 .global     _start
 .global		mem_test
+.global 	print_lcd 
 _start:
 _reset_handler:
 	xor	r0, r0, r0
@@ -259,6 +260,95 @@ _crt0:
 	ori  r2, r2, 0x003f
 	sw   (r1+0), r2  
 */
+
+
+
+//////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////
+// mem test
+
+
+
+	
+	// segunda escritura
+	mvhi r19, hi(0x40000020)
+	ori  r19, r19, lo(0x40000020)
+
+	mvhi r4, hi(0xcafebabe)
+	ori  r4, r4, lo(0xcafebabe)
+	sw   (r19+0), r4		// almacenar dato en memoria
+
+	mvhi r19, hi(0x80005004)
+	ori  r19, r19, lo(0x80005004)
+	sw   (r19+0), r4		//visualizar dato en lcd
+
+
+
+	// primera escritura
+	mvhi r19, hi(0x40000000)
+	ori  r19, r19, lo(0x40000000)
+
+	mvhi r4, hi(0xabadface)
+	ori  r4, r4, lo(0xabadface)
+	sw   (r19+0), r4		// almacenar dato en memoria
+
+	mvhi r19, hi(0x80001004)
+	ori  r19, r19, lo(0x80001004)
+	sw   (r19+0), r4	
+
+
+
+		// tercera escritura
+	mvhi r19, hi(0x40000010)
+	ori  r19, r19, lo(0x40000010)
+
+	mvhi r4, hi(0x12345678)
+	ori  r4, r4, lo(0x12345678)
+	sw   (r19+0), r4		// almacenar dato en memoria
+
+
+
+	// enviar orden inicio de lectura
+	mvhi r4, hi(0xefecadab)	// commando 
+	ori  r4, r4, lo(0xefecadab)
+	mvhi r19, hi(0x80004004)	// almacenar insruccion en data_out_b
+	ori  r19, r19, lo(0x80004004)
+	sw   (r19+0), r4
+
+
+	// primera lectura
+
+	mvhi r19, hi(0x40000000)
+	ori  r19, r19, lo(0x40000000)
+	lw   r4, (r19+0)		// leer dato	
+
+
+	mvhi r19, hi(0x80004004)	// visualizar lectura en lcd
+	ori  r19, r19, lo(0x80004004)
+	sw   (r19+0), r4
+
+
+
+	// segunda lectura
+	mvhi r19, hi(0x40000020)
+	ori  r19, r19, lo(0x40000020)
+	lw   r5, (r19+0)		// leer dato	
+
+
+
+
+	mvhi r19, hi(0x80006004)	// visualizar lectura en lcd
+	ori  r19, r19, lo(0x80006004)
+	sw   (r19+0), r5
+
+
+
+//////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////
+
+
+
+
 	mv      r1, r2
 	mvi     r2, 0
 	mvi     r3, 0
@@ -266,8 +356,24 @@ _crt0:
 
 
 
+print_lcd:
+
+// primera lectura
+
+	mvhi r19, hi(0x40000000)
+	ori  r19, r19, lo(0x40000000)
+	lw   r4, (r19+0)		// leer dato	
+	lw   r5, (r19+4)		// leer dato	
 
 
+	mvhi r19, hi(0x80004004)	// visualizar lectura en lcd
+	ori  r19, r19, lo(0x80004004)
+	sw   (r19+0), r4
+
+	mvhi r19, hi(0x80001004)	// visualizar lectura en lcd
+	ori  r19, r19, lo(0x80001004)
+	sw   (r19+0), r5
+	ret
 
 
 .section .rodata, "a"

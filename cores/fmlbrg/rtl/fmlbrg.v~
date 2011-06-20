@@ -166,29 +166,29 @@ assign datamem_we = ({4{datamem_we_fml}} & 4'hff)
 always @(*) begin
 	datamem_di = fml_di;
 	if(datamem_we_wb) begin
-		if(wb_adr_i[1]) begin
+//		if(wb_adr_i[1]) begin
 			/* lower 32-bit word */
 			if(wb_sel_i[0])
 				datamem_di[7:0] = wb_dat_i[7:0];
 			if(wb_sel_i[1])
 				datamem_di[15:8] = wb_dat_i[15:8];
-/*			if(wb_sel_i[2])
+			if(wb_sel_i[2])
 				datamem_di[23:16] = wb_dat_i[23:16];
 			if(wb_sel_i[3])
 				datamem_di[31:24] = wb_dat_i[31:24];
-*/
-		end else begin
+
+//		end else begin
 			/* upper 32-bit word */
-			if(wb_sel_i[0])
+/*			if(wb_sel_i[0])
 				datamem_di[23:16] = wb_dat_i[7:0];
 			if(wb_sel_i[1])
 				datamem_di[31:24] = wb_dat_i[15:8];
-/*			if(wb_sel_i[2])
+			if(wb_sel_i[2])
 				datamem_di[55:48] = wb_dat_i[23:16];
 			if(wb_sel_i[3])
 				datamem_di[63:56] = wb_dat_i[31:24];
 */
-		end
+//		end
 	end
 end
 

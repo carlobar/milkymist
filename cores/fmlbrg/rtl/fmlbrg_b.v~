@@ -49,7 +49,7 @@ assign fml_we = wb_we_i;
 assign fml_sel = wb_sel_i;  
 
 assign wb_ack_o = fml_ack;
-assign wb_dat_o = fml_d5;
+assign wb_dat_o = fml_di;
 
 
 endmodule

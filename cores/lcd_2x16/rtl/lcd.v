@@ -14,7 +14,7 @@ module lcd #(
 	input 	[31:0]	buffer_data,
 	input 	[31:0]	buffer_data_b,
 	input 	rst,
-	input 	clk,
+	input 	clkin,
 	output	reg	e,
 	output	reg	rs,
 	output	reg	rw,
@@ -22,6 +22,12 @@ module lcd #(
 
 );
 
+
+
+BUFG lcd_clk(
+	.I(clkin),
+	.O(clk)
+);
 
 
 
@@ -388,7 +394,7 @@ always @(*) begin
 
 		check_busy: begin
 			if(end_instr) begin
-				if(1'b1) begin	//busy_data[7] != 1'b1
+				if(busy_data[7] != 1'b1) begin	//busy_data[7] != 1'b1
 					jump_state = jmp_state;
 					next_state = wait_37us;
 				end
@@ -794,56 +800,56 @@ always @(*) begin
 end
 
 
-always @(*) begin
+always @(posedge clk) begin
 
 	if(enable_instr) begin
 	case(state_instr)
 		idle: begin
-//			e = 0
-			rs = 0;
-			rw = 0;
-			data = 0;
-			busy_data = 0;
-			end_instr = 1'b0;
+//			e <= 0
+			rs <= 0;
+			rw <= 0;
+			data <= 4'b0;
+			busy_data <= 8'b0;
+			end_instr <= 1'b0;
 		end
 		upper_data: begin
-//			e = 1;
-			rs = rs_;
-			rw = rw_;
-			data = data_bus[7:4];
-			busy_data = {data_io,{4{1'b0}}};
-			end_instr = 1'b0;
+//			e <= 1;
+			rs <= rs_;
+			rw <= rw_;
+			data <= data_bus[7:4];
+			busy_data <= {data_io,{4{1'b0}}};
+			end_instr <= 1'b0;
 		end
 		delay: begin
-//			e = 0;
-			rs = rs_;
-			rw = rw_;
-			data = data;
-			busy_data = busy_data;
-			end_instr = 1'b0;
+//			e <= 0;
+			rs <= rs_;
+			rw <= rw_;
+			data <= data;
+			busy_data <= busy_data;
+			end_instr <= 1'b0;
 		end
 		lower_data: begin
-//			e = 1;
-			rs = rs_;
-			rw = rw_;
-			data = data_bus[3:0];
-			busy_data = {busy_data[7:4],data_io};
-			end_instr = 1'b1;
+//			e <= 1;
+			rs <= rs_;
+			rw <= rw_;
+			data <= data_bus[3:0];
+			busy_data <= {busy_data[7:4],data_io};
+			end_instr <= 1'b1;
 		end
 		default: begin
-			data = 0;
-			rs = 0;
-			rw = 0;
-			busy_data = 0;
-			end_instr = 0;
+			data <= 4'b0;
+			rs <= 0;
+			rw <= 0;
+			busy_data <= 8'b0;
+			end_instr <= 0;
 		end
 	endcase
 	end else begin
-			data = 0;
-			rs = 0;
-			rw = 0;
-			busy_data = 0;
-			end_instr = 0;
+			data <= 4'b0;
+			rs <= 0;
+			rw <= 0;
+			busy_data <= 8'b0;
+			end_instr <= 0;
 	end
 		
 end
@@ -946,7 +952,7 @@ always @(*) begin
 
 	else begin
 		if(load_data_raw >= 10)
-			load_data = {4'b0100,(load_data_raw-4'd1001)};
+			load_data = {4'b0100,(load_data_raw-4'b1001)};
 		else
 			load_data = {4'b0011,load_data_raw};
 	end

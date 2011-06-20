@@ -44,6 +44,8 @@ module sysctl #(
 	output reg hard_reset
 );
 
+initial hard_reset = 1'b0;
+
 /*
  * GPIO
  */

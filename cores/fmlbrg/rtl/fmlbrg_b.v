@@ -42,7 +42,7 @@ module fmlbrg_b #(
 	input [31:0] fml_di
 );
 
-assign fml_adr = wb_adr_i[fml_depth-1:0];
+assign fml_adr = wb_adr_i[fml_depth:1];
 assign fml_do = wb_dat_i;
 assign fml_stb = wb_cyc_i & wb_stb_i;
 assign fml_we = wb_we_i;

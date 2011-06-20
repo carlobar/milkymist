@@ -1,10 +1,11 @@
 MMDIR=../..
 include $(MMDIR)/software/include.mak
-
+OBJECTS_B=crt0_b.o app.o 
 OBJECTS=crt0.o main.o boot.o splash.o
 SEGMENTS=-j .text -j .data -j .rodata
+FILE1=app.c
 
-all: bios_splash.bin
+all: bios_splash.bin app.bin bios.bin
 
 %.bin: %.elf
 	$(OBJCOPY) $(SEGMENTS) -O binary $< $@
@@ -14,10 +15,17 @@ all: bios_splash.bin
 bios.elf: linker.ld $(OBJECTS) $(MMDIR)/software/libhpdmc/libhpdmc.S $(MMDIR)/software/libbase/libbase-light.a $(MMDIR)/software/libnet/libnet.a
 	make -C $(MMDIR)/software/libhpdmc clean
 	make -C $(MMDIR)/software/libhpdmc
-
-
 	$(LD) $(LDFLAGS) -T linker.ld -N -o $@ $(OBJECTS) -L$(MMDIR)/software/libhpdmc -L$(MMDIR)/software/libbase -L$(MMDIR)/software/libnet -lhpdmc -lbase-light -lnet
 	chmod -x $@
+
+app.elf: linker.ld $(OBJECTS_B)
+	$(LD) $(LDFLAGS) -T linker.ld -N -o $@ $(OBJECTS_B) -L$(MMDIR)/software/libhpdmc -L$(MMDIR)/software/libbase -L$(MMDIR)/software/libnet -lhpdmc -lbase-light -lnet
+	lm32-rtems4.11-objdump -S app.elf  > app.dis
+	chmod -x $@
+
+app.o: ${FILE1} Makefile
+	$(CC) $(CFLAGS) -c ${FILE1} -lm
+
 
 $(MMDIR)/software/libbase/libbase-light.a:
 	make -C $(MMDIR)/software/libbase

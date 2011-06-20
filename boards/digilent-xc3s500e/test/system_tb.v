@@ -10,7 +10,7 @@ module system_tb();
  initial begin
      $dumpfile("system_tb.vcd");
      $dumpvars(0,system_tb);
-     #900000 $finish;
+     #17000000 $finish;
 
   end
 
@@ -51,7 +51,7 @@ always #10 sys_clk = ~sys_clk;
 
 initial begin
 	resetin = 1'b1;
-	#200 resetin = 1'b0;  
+	#60 resetin = 1'b0;  
 end
 
 initial $readmemh("bios.rom", flash);
@@ -66,12 +66,19 @@ end
 
 
 assign flash_d16 = flash_we_n ? flash_d16_o : 16'bz;
-assign flash_d16_i =  ~flash_we_n ? flash_16 : 16'bz;
+assign flash_d16_i =  flash_d16;
 
+reg sw;
+
+initial begin
+	sw = 4'd1;
+	#370700 
+	sw = 4'd0;
+end
 
 
 system system(
-	.clkin(sys_clk),
+	.clk_in(sys_clk),
 	.resetin(resetin),
 
 	.flash_adr(flash_adr),
@@ -90,6 +97,8 @@ system system(
 	.sdram_ba(sdram_ba),
 	.sdram_dq(sdram_dq),
 	.sdram_dqs(sdram_dqs),
+
+	.sw(sw),
 
 	.uart_rx(),
 	.uart_tx()

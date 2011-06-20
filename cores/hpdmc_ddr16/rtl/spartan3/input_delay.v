@@ -4,35 +4,42 @@ module input_delay#(
 )(
 	input clk,
 	input rst,
-	input [length-1:0] data_in,
-	output [length-1:0] data_out,
 	input idelay_rst,
 	input idelay_ce,
-	input idelay_inc
+	input idelay_inc,
+	output idelay_done,
+	input [length-1:0] data_in,
+	output [length-1:0] data_out
+
 );
 
+//wire [length-1:0] data_output;
+//wire [length-1:0] data_input;
 
+wire [LUTs-1:0] sel;
 
-reg [LUTs-1:0] sel;
+gen_sel_signal #(
+	.LUTs(LUTs)
+)
+gen_sel (
+	.clk(clk),
+	.rst(rst),
+	.idelay_rst(idelay_rst),
+	.idelay_ce(idelay_ce),
+	.idelay_inc(idelay_inc),
+	.sel_signal(sel),
+	.done(idelay_done)
+
+);
+
 
 
 genvar i;
 generate
 	for (i=0; i < length; i=i+1) begin: delay_gen
-		delay_unit #(.LUTs(LUTs)) n(data_in[i], sel, data_out[i]);
+		delay_unit #(.LUTs(LUTs)) delay_i (data_in[i], sel, data_out[i]);
 	end
 endgenerate
-
-
-always @(posedge clk) begin
-	if(rst | idelay_rst)
-		sel <= {LUTs{1'b0}};
-	else if(idelay_ce & idelay_inc)
-		sel <= {1'b0,sel[LUTs-1-1-1:0],1'b1};
-	else if(idelay_ce & (~idelay_inc))
-		sel <= {1'b0,sel[LUTs-1:1]};
-end
-
 
 
 

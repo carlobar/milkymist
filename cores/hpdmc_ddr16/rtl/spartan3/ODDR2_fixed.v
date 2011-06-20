@@ -10,12 +10,13 @@ module ODDR2_fixed #(
 	input CE,
 	input R,
 	input S,
-	output reg Q
+	output Q
 );
 
-wire D_ff, Q1, Q0;
+//wire D_ff;
 
 //////////////////////////////////
+/*
 flip_flop_d ffD(
 	.D(D1),
 	.clk(C0),
@@ -24,8 +25,8 @@ flip_flop_d ffD(
 	.set(S),
 	.Q(D_ff)
 );
-
-
+*/
+/*
 
 flip_flop_d ffD0(
 	.D(D0),
@@ -52,7 +53,7 @@ flip_flop_d ffD1(
 
 
 
-always @(C0 or C1 or D0 or D1 or D_ff) begin
+always @(*) begin
 	case ({C1,C0})
 		2'b00:
 			Q = Q0;
@@ -64,8 +65,8 @@ always @(C0 or C1 or D0 or D1 or D_ff) begin
 			Q = Q1;
 	endcase
 end
+*/
 
-/*
 ODDR2 #(
 	.DDR_ALIGNMENT(DDR_ALIGNMENT),
 	.INIT(INIT),
@@ -76,10 +77,10 @@ ODDR2 #(
 	.C1(C1),
 	.CE(CE),
 	.D0(D0),
-	.D1(D_ff),
+	.D1(D1),//D_ff
 	.R(R),
 	.S(S)
 );
-*/
+
 
 endmodule

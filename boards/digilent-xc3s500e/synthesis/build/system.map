@@ -3,71 +3,124 @@ Xilinx Map Application Log File for Design 'system'
 
 Design Information
 ------------------
-Command Line   : map system.ngd 
+Command Line   : map -ignore_keep_hierarchy -logic_opt on -cm speed -timing -ol
+high -xe n system.ngd 
 Target Device  : xc3s500e
 Target Package : fg320
 Target Speed   : -5
 Mapper Version : spartan3e -- $Revision: 1.52 $
-Mapped Date    : Tue May  3 23:59:18 2011
+Mapped Date    : Mon Jun 20 13:39:47 2011
 
 Mapping design into LUTs...
 WARNING:LIT:176 - Clock buffer is designated to drive clock loads. BUFGMUX
-   symbol "physical_group_sys_clk/b1" (output signal=sys_clk) has a mix of clock
-   and non-clock loads. The non-clock loads are:
-   Pin PSCLK of ddram/clkgen_dqs
-WARNING:LIT:175 - Clock buffer is designated to drive clock loads. BUFGMUX
-   symbol "physical_group_sys_clk_n/b2" (output signal=sys_clk_n) has a mix of
-   clock and non-clock loads. Some of the non-clock loads are (maximum of 5
-   listed):
-   Pin I0 of ddram/hpdmc/ddrio/oddr_dqm/oddr1/Mmux_Q11
-   Pin I0 of ddram/hpdmc/ddrio/oddr_dqm/oddr0/Mmux_Q11
-   Pin I0 of ddram/hpdmc/ddrio/sdram_dq_t<0>1
-   Pin I0 of ddram/hpdmc/ddrio/oddr_dq/oddr9/Mmux_Q11
-   Pin I0 of ddram/hpdmc/ddrio/oddr_dq/oddr8/Mmux_Q11
-WARNING:LIT:178 - Clock buffer BUFGMUX symbol
-   "physical_group_ddram/dqs_clk_n/ddram/b2" (output signal=ddram/dqs_clk_n)
-   does not drive clock loads. Driving only non-clock loads with a clock buffer
-   will cause ALL of the dedicated clock routing resources for this buffer to be
-   wasted. The non-clock loads are:
-   Pin I0 of ddram/hpdmc/ddrio/sdram_dqs_out<0>1
+   symbol "physical_group_ddram/dqs_clk_delayed/ddram/b_dqs_p_delayed" (output
+   signal=ddram/dqs_clk_delayed) has a mix of clock and non-clock loads. The
+   non-clock loads are:
+   Pin PSCLK of ddram/clkgen_dqs_delayed
+WARNING:LIT:176 - Clock buffer is designated to drive clock loads. BUFGMUX
+   symbol "physical_group_sampling/sample_clk/sampling/b_sample" (output
+   signal=sampling/sample_clk) has a mix of clock and non-clock loads. The
+   non-clock loads are:
+   Pin PSCLK of sampling/clkgen_sample
 Writing file system.ngm...
 Running directed packing...
-WARNING:Pack:266 - The function generator cpu/cpu/adder/addsub/Result<0>1 failed
-   to merge with F5 multiplexer cpu/cpu/x_result<0>100_f5.  There is a conflict
-   for the FXMUX.  The design will exhibit suboptimal timing.
+WARNING:Pack:266 - The function generator graph/pixel_i/rgb<2>21 failed to merge
+   with F5 multiplexer graph/pixel_i/rgb<1>1146_f5.  There is a conflict for the
+   FXMUX.  The design will exhibit suboptimal timing.
 Running delay-based LUT packing...
-Running related packing...
 Updating timing models...
-Writing design file "system.ncd"...
-WARNING:PhysDesignRules:372 - Gated clock. Clock net lcd/busy_data_and0000 is
-   sourced by a combinatorial pin. This is not good design practice. Use the CE
-   pin to control the loading of data into the flip-flop.
-WARNING:PhysDesignRules:367 - The signal <phy_rx_data<0>_IBUF> is incomplete.
-   The signal does not drive any load pins in the design.
-WARNING:PhysDesignRules:367 - The signal <phy_rx_data<1>_IBUF> is incomplete.
-   The signal does not drive any load pins in the design.
-WARNING:PhysDesignRules:367 - The signal <phy_rx_data<2>_IBUF> is incomplete.
-   The signal does not drive any load pins in the design.
-WARNING:PhysDesignRules:367 - The signal <phy_rx_data<3>_IBUF> is incomplete.
-   The signal does not drive any load pins in the design.
-WARNING:PhysDesignRules:367 - The signal <phy_rx_clk_IBUF> is incomplete. The
-   signal does not drive any load pins in the design.
-WARNING:PhysDesignRules:367 - The signal <phy_tx_clk_IBUF> is incomplete. The
-   signal does not drive any load pins in the design.
-WARNING:PhysDesignRules:367 - The signal <phy_col_IBUF> is incomplete. The
-   signal does not drive any load pins in the design.
-WARNING:PhysDesignRules:367 - The signal <phy_crs_IBUF> is incomplete. The
-   signal does not drive any load pins in the design.
-WARNING:PhysDesignRules:367 - The signal <uart_rx_mon_IBUF> is incomplete. The
-   signal does not drive any load pins in the design.
-WARNING:PhysDesignRules:368 - The signal <uart_tx_mon_OBUF> is incomplete. The
-   signal is not driven by any source pin in the design.
-WARNING:PhysDesignRules:367 - The signal <phy_dv_IBUF> is incomplete. The signal
-   does not drive any load pins in the design.
-WARNING:PhysDesignRules:367 - The signal <phy_mii_data_IBUF> is incomplete. The
+Running timing-driven placement...
+Total REAL time at the beginning of Placer: 1 mins 31 secs 
+Total CPU  time at the beginning of Placer: 57 secs 
+
+Phase 1.1  Initial Placement Analysis
+Phase 1.1  Initial Placement Analysis (Checksum:56cf1ea5) REAL time: 1 mins 41 secs 
+
+Phase 2.7  Design Feasibility Check
+Phase 2.7  Design Feasibility Check (Checksum:56cf1ea5) REAL time: 1 mins 41 secs 
+
+Phase 3.31  Local Placement Optimization
+Phase 3.31  Local Placement Optimization (Checksum:56cf1ea5) REAL time: 1 mins 41 secs 
+
+Phase 4.2  Initial Clock and IO Placement
+
+................
+WARNING:Place:957 - Placer has detected that XIL_PLACE_ALLOW_LOCAL_BUFG_ROUTING
+   has been set. This environment variable has been deprecated. An ERROR in
+   clock placement rules can be demoted to a WARNING by using the
+   CLOCK_DEDICATED_ROUTE constraint on a specific component pin in the .ucf
+   file.
+WARNING:Place:963 - A DCM / BUFGCTRL clock component pair have been found that
+   are not placed at an optimal DCM / BUFGCTRL site pair. The DCM component
+   <clkgen_sys> is locked to site <DCM_X0Y1> and the corresponding BUFGCTRL
+   component <clk_50Mhz_BUFG> is locked to site <BUFGMUX_X0Y9>. This will not
+   allow the usage of the fast path between the DCM and the Clock buffer. This
+   is normally an ERROR but the CLOCK_DEDICATED_ROUTE constraint was applied on
+   COMP.PIN <clkgen_sys.CLK0> allowing your design to continue. This constraint
+   disables all clock placer rules related to the specified COMP.PIN. The use of
+   this override is highly discouraged as it may lead to very poor timing
+   results. It is recommended that this error condition be corrected in the
+   design.
+Phase 4.2  Initial Clock and IO Placement (Checksum:3ad35ab) REAL time: 2 mins 3 secs 
+
+...........
+....................................................
+Phase 5.30  Global Clock Region Assignment
+Phase 5.30  Global Clock Region Assignment (Checksum:3ad35ab) REAL time: 3 mins 12 secs 
+
+Phase 6.36  Local Placement Optimization
+Phase 6.36  Local Placement Optimization (Checksum:3ad35ab) REAL time: 3 mins 12 secs 
+
+Phase 7.8  Global Placement
+.....................
+......................................................................................
+......
+..................................................................................................................................................................
+.....................................
+................
+............................................................................................................................................................
+....................................
+Phase 7.8  Global Placement (Checksum:caf11397) REAL time: 6 mins 54 secs 
+
+Phase 8.5  Local Placement Optimization
+Phase 8.5  Local Placement Optimization (Checksum:caf11397) REAL time: 6 mins 54 secs 
+
+Phase 9.18  Placement Optimization
+Phase 9.18  Placement Optimization (Checksum:391833a2) REAL time: 12 mins 48 secs 
+
+Phase 10.5  Local Placement Optimization
+Phase 10.5  Local Placement Optimization (Checksum:391833a2) REAL time: 12 mins 49 secs 
+
+Total REAL time to Placer completion: 12 mins 50 secs 
+Total CPU  time to Placer completion: 9 mins 9 secs 
+Running physical synthesis...
+
+Physical synthesis completed.
+Running post-placement packing...
+WARNING:PhysDesignRules:367 - The signal <sys_clk_fb_IBUF> is incomplete. The
    signal does not drive any load pins in the design.
 WARNING:PhysDesignRules:781 - PULLUP on an active net. PULLUP of comp led<7> is
    set but the tri state is not configured. 
+WARNING:PhysDesignRules:812 - Dangling pin <DOA11> on
+   block:<sampling/buffer_posedge/Mram_mem_a4.A>:<RAMB16_RAMB16A>.
+WARNING:PhysDesignRules:812 - Dangling pin <DOA12> on
+   block:<sampling/buffer_posedge/Mram_mem_a4.A>:<RAMB16_RAMB16A>.
+WARNING:PhysDesignRules:812 - Dangling pin <DOA13> on
+   block:<sampling/buffer_posedge/Mram_mem_a4.A>:<RAMB16_RAMB16A>.
+WARNING:PhysDesignRules:812 - Dangling pin <DOA14> on
+   block:<sampling/buffer_posedge/Mram_mem_a4.A>:<RAMB16_RAMB16A>.
+WARNING:PhysDesignRules:812 - Dangling pin <DOA15> on
+   block:<sampling/buffer_posedge/Mram_mem_a4.A>:<RAMB16_RAMB16A>.
+WARNING:PhysDesignRules:812 - Dangling pin <DOA11> on
+   block:<sampling/buffer_negedge/Mram_mem_a4.A>:<RAMB16_RAMB16A>.
+WARNING:PhysDesignRules:812 - Dangling pin <DOA12> on
+   block:<sampling/buffer_negedge/Mram_mem_a4.A>:<RAMB16_RAMB16A>.
+WARNING:PhysDesignRules:812 - Dangling pin <DOA13> on
+   block:<sampling/buffer_negedge/Mram_mem_a4.A>:<RAMB16_RAMB16A>.
+WARNING:PhysDesignRules:812 - Dangling pin <DOA14> on
+   block:<sampling/buffer_negedge/Mram_mem_a4.A>:<RAMB16_RAMB16A>.
+WARNING:PhysDesignRules:812 - Dangling pin <DOA15> on
+   block:<sampling/buffer_negedge/Mram_mem_a4.A>:<RAMB16_RAMB16A>.
 WARNING:PhysDesignRules:1063 - Invalid configuration (incorrect pin connections
    and/or modes) on
    block:<cpu/cpu/instruction_unit/icache/memories[1].way_0_data_ram/Mram_mem1.A
@@ -98,73 +151,48 @@ WARNING:PhysDesignRules:1063 - Invalid configuration (incorrect pin connections
    block:<cpu/cpu/instruction_unit/icache/memories[0].way_0_data_ram/Mram_mem3.A
    >:<RAMB16_RAMB16A>.  The block is configured to use an input parity pins.
    There is a dangling output parity pin.
-WARNING:PhysDesignRules:738 - Unexpected DCM configuration. DCM comp
-   ddram/clkgen_dqs has CLKOUT_PHASE_SHIFT set without a connection from CLKO or
-   CLK2X to CLKFB. To achieve fine-grained phase shifting (CLKOUT_PHASE_SHIFT =
-   FIXED or VARIABLE), CLKFB must be connected to either CLK0 or CLK2X.
-WARNING:PhysDesignRules:739 - Unexpected DCM feedback loop. The signal
-   ddram/dqs_clk on the CLKFB pin of comp ddram/clkgen_dqs is not driven by an
-   IOB or BUFGMUX therefore the phase relationship of output clocks to CLKIN
-   cannot be guaranteed.
 
 Design Summary
 --------------
 
 Design Summary:
 Number of errors:      0
-Number of warnings:   26
+Number of warnings:   23
 Logic Utilization:
-  Total Number Slice Registers:       3,519 out of   9,312   37%
-    Number used as Flip Flops:        3,515
-    Number used as Latches:               4
-  Number of 4 input LUTs:             4,469 out of   9,312   47%
+  Number of Slice Flip Flops:         4,063 out of   9,312   43%
+  Number of 4 input LUTs:             5,162 out of   9,312   55%
 Logic Distribution:
-  Number of occupied Slices:          3,594 out of   4,656   77%
-    Number of Slices containing only related logic:   3,594 out of   3,594 100%
-    Number of Slices containing unrelated logic:          0 out of   3,594   0%
+  Number of occupied Slices:          4,069 out of   4,656   87%
+    Number of Slices containing only related logic:   4,069 out of   4,069 100%
+    Number of Slices containing unrelated logic:          0 out of   4,069   0%
       *See NOTES below for an explanation of the effects of unrelated logic.
-  Total Number of 4 input LUTs:       4,773 out of   9,312   51%
-    Number used as logic:             4,466
-    Number used as a route-thru:        304
-    Number used as Shift registers:       3
+  Total Number of 4 input LUTs:       5,487 out of   9,312   58%
+    Number used as logic:             5,156
+    Number used as a route-thru:        325
+    Number used as Shift registers:       6
 
   The Slice Logic Distribution report is not meaningful if the design is
   over-mapped for a non-slice resource or if Placement fails.
 
-  Number of bonded IOBs:                126 out of     232   54%
-    IOB Flip Flops:                      52
-  Number of ODDR2s used:                  2
-    Number of DDR_ALIGNMENT = NONE        2
+  Number of bonded IOBs:                116 out of     232   50%
+  Number of IDDR2s used:                 16
+    Number of DDR_ALIGNMENT = NONE       16
     Number of DDR_ALIGNMENT = C0          0
     Number of DDR_ALIGNMENT = C1          0
-  Number of RAMB16s:                     10 out of      20   50%
-  Number of BUFGMUXs:                     5 out of      24   20%
-  Number of DCMs:                         2 out of       4   50%
+  Number of ODDR2s used:                 22
+    Number of DDR_ALIGNMENT = NONE       22
+    Number of DDR_ALIGNMENT = C0          0
+    Number of DDR_ALIGNMENT = C1          0
+  Number of RAMB16s:                     18 out of      20   90%
+  Number of BUFGMUXs:                    11 out of      24   45%
+  Number of DCMs:                         4 out of       4  100%
   Number of MULT18X18SIOs:                3 out of      20   15%
 
-Average Fanout of Non-Clock Nets:                3.61
+Average Fanout of Non-Clock Nets:                3.46
 
-Peak Memory Usage:  172 MB
-Total REAL time to MAP completion:  58 secs 
-Total CPU time to MAP completion:   27 secs 
-
-NOTES:
-
-   Related logic is defined as being logic that shares connectivity - e.g. two
-   LUTs are "related" if they share common inputs.  When assembling slices,
-   Map gives priority to combine logic that is related.  Doing so results in
-   the best timing performance.
-
-   Unrelated logic shares no connectivity.  Map will only begin packing
-   unrelated logic into a slice once 99% of the slices are occupied through
-   related logic packing.
-
-   Note that once logic distribution reaches the 99% level through related
-   logic packing, this does not mean the device is completely utilized.
-   Unrelated logic packing will then begin, continuing until all usable LUTs
-   and FFs are occupied.  Depending on your timing budget, increased levels of
-   unrelated logic packing may adversely affect the overall timing performance
-   of your design.
+Peak Memory Usage:  240 MB
+Total REAL time to MAP completion:  13 mins 20 secs 
+Total CPU time to MAP completion:   9 mins 26 secs 
 
 Mapping completed.
 See MAP report file "system.mrp" for details.

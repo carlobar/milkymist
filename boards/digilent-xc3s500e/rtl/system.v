@@ -1,7 +1,7 @@
 /*
  * Milkymist VJ SoC
  * Copyright (C) 2007, 2008, 2009, 2010 Sebastien Bourdeauducq
- *
+ *k
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, version 3 of the License.
@@ -19,10 +19,13 @@
 // incluir ddr, ps2, vga
 
 `include "setup.v"
-
+`include "lm32_include.v"
+`include "system_conf.v"
+`include "lm32_include.v"
+`include "setup_monitor.v"
 
 module system(
-	input clkin,
+	input clk_in,
 	input resetin,
 	
 	// Boot ROM
@@ -66,12 +69,12 @@ module system(
 	output [1:0] sdram_ba,
 	inout [15:0] sdram_dq,
 	inout [1:0] sdram_dqs,
-	//input	sys_clk_fb,
+	input	sys_clk_fb,
 
 
 
 	// Ethernet
-
+/*
 	//output phy_rst_n,
 	input phy_tx_clk,
 	input phy_rx_clk,
@@ -84,7 +87,7 @@ module system(
 	output phy_mii_clk,
 	inout phy_mii_data,
 
-
+*/
 	//output phy_tx_er,
 //	input phy_rx_er,
 //	input phy_irq_n,
@@ -94,19 +97,14 @@ module system(
 // switches
 	input [3:0]	sw,
 
+	input [1:0]	rot,
 
 	// VGA
-/*
-	output vga_psave_n,
-	output vga_hsync_n,
-	output vga_vsync_n,
-	output [7:0] vga_r,
-	output [7:0] vga_g,
-	output [7:0] vga_b,
-	output vga_clk,
-	inout vga_sda,
-	output vga_sdc,
-*/
+
+	output vga_hsync,
+	output vga_vsync,
+	output [2:0] rgb,
+
 
 
 	// UART
@@ -114,26 +112,83 @@ module system(
 	output uart_tx,
 
 	// monitor UART
-	input uart_rx_mon,
-	output uart_tx_mon,
+	//input uart_rx_mon,
+	//output uart_tx_mon,
 
 	// GPIO
 	input [2:0] btn,    // 3
 	output [7:0] led    //        2 (2 LEDs for UART activity)
 );
 
+
+
+wire clkin;
+
+`ifndef SIMULATION_DDR
+
+   IBUFG clkin_BUFG (
+      .O(clkin), // Clock buffer output
+      .I(clk_in)  // Clock buffer input (connect directly to
+             // top-level port)
+   );
+
+//defparam IBUFG_inst.IOSTANDARD = "LVCMOS25";
+
+`else
+
+	assign clkin = clk_in;
+
+`endif
+
+
 //------------------------------------------------------------------
 // Clock and Reset Generation
 //------------------------------------------------------------------
 wire flash_reset_n;
 wire sys_clk;
+wire sys_clk_50Mhz;
+wire clk_50Mhz;
+wire sys_clk_100Mhz;
+wire clk_100Mhz;
 wire sys_clk_n;
 wire hard_reset;
-wire reset_button = resetin;
+wire reset_button;// = resetin;
 wire ddr_reset;
 
 
-wire ram_clk, ram_clk_n;
+/*
+reg rst_main;
+
+
+
+
+reg reset_a, reset_b, reset_c;
+reg [2:0] rst_delay;
+initial rst_delay = 3'b111; 
+initial rst_main = 1'b0;
+always @(posedge clkin) begin
+	if (resetin) begin
+		rst_delay <= 3'b111;
+		rst_main <= 1'b0;
+	end else if (rst_delay == 3'd0) begin
+		rst_delay <= rst_delay;
+		rst_main <= 1'b0;
+	end else if (rst_delay < 3'b100) begin 
+		rst_delay <= rst_delay-3'd1;
+		rst_main <= 1'b1;
+	end else begin
+		rst_delay <= rst_delay-3'd1;
+		rst_main <= 1'b0;
+	end
+	reset_a <= resetin;
+	reset_b <= reset_a;
+	reset_c <= reset_b;
+
+end
+*/
+assign reset_button = resetin;
+
+//wire ram_clk, ram_clk_n;
 //assign sdram_clk_p = ram_clk;
 //assign sdram_clk_n = ram_clk_n;
 
@@ -146,43 +201,58 @@ DCM_SP #(
 	.CLKFX_MULTIPLY(`CLKFX_MULTIPLY), // 2 to 32
 
 	.CLKIN_DIVIDE_BY_2("FALSE"),
-	.CLKIN_PERIOD(`CLOCK_PERIOD),
+	.CLKIN_PERIOD(20),
 	.CLKOUT_PHASE_SHIFT("NONE"),
-	.CLK_FEEDBACK("NONE"),
-	.DESKEW_ADJUST("SYSTEM_SYNCHRONOUS"),
+	.CLK_FEEDBACK("1X"),
+	.DESKEW_ADJUST("SOURCE_SYNCHRONOUS"),
 	.DFS_FREQUENCY_MODE("LOW"),
 	.DLL_FREQUENCY_MODE("LOW"),
 	.DUTY_CYCLE_CORRECTION("TRUE"),
 //	.FACTORY_JF(16'hF0F0),
 	.PHASE_SHIFT(0),
 	.STARTUP_WAIT("TRUE")
-) clkgen (
-	.CLK0(),
+) clkgen_sys (
+	.CLK0(clk_50Mhz),//sys_clk_50Mhz
 	.CLK90(),
 	.CLK180(),
 	.CLK270(),
 
-	.CLK2X(),//ram_clk
+	.CLK2X(),//ram_clk//sys_clk_100Mhz
 	.CLK2X180(),//ram_clk_n
 
 	.CLKDV(),
 	.CLKFX(sys_clk_dcm),
 	.CLKFX180(sys_clk_n_dcm),
 	.LOCKED(),
-	.CLKFB(),//sys_clk_fb
+	.CLKFB(clk_50Mhz),//sys_clk_fb//
 	.CLKIN(clkin),
-	.RST(1'b0)
+	.RST(1'b0)//1'b0/////rst_main
 );
 
-BUFG b1(
+BUFG b_sys_clk(
 	.I(sys_clk_dcm),
 	.O(sys_clk)
 );
 
-BUFG b2(
+BUFG b_sys_clk_n(
 	.I(sys_clk_n_dcm),
 	.O(sys_clk_n)
 );
+
+
+/*
+BUFG b_sys_clk_50Mhz(
+	.I(sys_clk_50Mhz),
+	.O(clk_50Mhz)
+);
+
+BUFG b_sys_clk_100Mhz(
+	.I(sys_clk_100Mhz),
+	.O(clk_100Mhz)
+);
+*/
+
+//assign clk_50Mhz = clkin;
 
 
 `else
@@ -191,13 +261,21 @@ assign sys_clk = ~clkin;
 `endif
 
 
+
+
+
+
+
+
+
+
 `ifndef SIMULATION
 /* Synchronize the reset input */
 //reg rst0;
 reg rst1;
 //always @(posedge sys_clk) rst0 <= resetin;
 always @(posedge sys_clk) rst1 <= reset_button | hard_reset;
-
+//wire dcm_rst = rst1;
 /* Debounce it
  * and generate power-on reset.
  */
@@ -205,15 +283,16 @@ always @(posedge sys_clk) rst1 <= reset_button | hard_reset;
 
 reg [19:0] rst_debounce;
 reg sys_rst;
-initial rst_debounce <= 20'h01ff0;
+initial rst_debounce <= 20'h00014;
 initial sys_rst <= 1'b1;
 always @(posedge sys_clk) begin
 	if(rst1 | hard_reset)
-		rst_debounce <= 20'h01ff0;
+		rst_debounce <= 20'h00014;
 	else if(rst_debounce != 20'd0)
 		rst_debounce <= rst_debounce - 20'd1;
 	sys_rst <= rst_debounce != 20'd0;
 end
+
 
 //assign phy_rst_n = ~sys_rst;
 
@@ -225,7 +304,7 @@ end
  * From datasheet, minimum reset pulse width is 100ns
  * and reset-to-read time is 150ns.
  */
-
+/*
 // se libera flash_reset_n despes de 128 ciclos del reloj
 reg [7:0] flash_rstcounter;
 initial flash_rstcounter <= 8'd0;
@@ -237,12 +316,58 @@ always @(posedge sys_clk) begin
 end
 
 assign flash_reset_n = flash_rstcounter[7];
-assign ddr_reset = ~flash_reset_n;
+*/
+
+/*
+reg [7:0] dcm_rstcounter;
+initial dcm_rstcounter <= 8'd0;
+always @(posedge sys_clk) begin
+	if(rst1)
+		dcm_rstcounter <= 8'd0;
+	else if(~(dcm_rstcounter[5] & dcm_rstcounter[3]))
+		dcm_rstcounter <= dcm_rstcounter + 8'd1;
+	else
+		dcm_rstcounter <= dcm_rstcounter;
+end
+
+
+assign dcm_rst = dcm_rstcounter[5] & dcm_rstcounter[3];
+*/
 `else
 wire sys_rst;
 assign sys_rst = resetin;
 `endif
-assign led[7] = sys_rst;
+
+
+
+
+
+
+
+
+
+
+//assign led[7] = sys_rst;
+
+
+
+
+
+
+
+
+wire [13:0] gpio_outputs;
+wire [31:0] data_out, data_out_b, data_out_c, data_out_d;
+
+
+
+wire [`SDRAM_DEPTH-1:0] fml_adr_ddr;
+wire fml_stb_ddr;
+wire fml_we_ddr;
+wire fml_ack_ddr;
+wire [3:0] fml_sel_ddr;
+wire [31:0] fml_dw_ddr;
+wire [31:0] fml_dr_ddr;
 
 //-------------------------------------------------------
 // output wire
@@ -314,57 +439,251 @@ wire		eth_rx_ack,
 //------------------------------------------------------------------
 wire [31:0]	norflash_adr,
 		bram_adr,
-		csrbrg_adr,
-		uart_adr;
+		csrbrg_adr;
 
-wire [2:0]	bram_cti,
-		uart_cti;
+wire [2:0]	bram_cti;
 
 wire [31:0]	norflash_dat_r,
 		norflash_dat_w,
 		bram_dat_r,
 		bram_dat_w,
 		csrbrg_dat_r,
-		csrbrg_dat_w,
-		uart_dat_w,
-		uart_dat_r;
+		csrbrg_dat_w;
 
 wire [3:0]	bram_sel,
-		norflash_sel,
-		uart_sel;
+		norflash_sel;
 
 wire		bram_we,
 		csrbrg_we,
-		aceusb_we,
-		uart_we;
+		aceusb_we;
 
 wire		norflash_cyc,
 		bram_cyc,
-		csrbrg_cyc,
-		uart_cyc;
+		csrbrg_cyc;
 
 wire		norflash_stb,
 		bram_stb,
-		csrbrg_stb,
-		uart_stb;
+		csrbrg_stb;
 
 wire		norflash_ack,
 		bram_ack,
-		csrbrg_ack,
-		uart_ack;
+		csrbrg_ack;
 
 
+
+//------------------------------------------------------------------
+// FML master wires
+//------------------------------------------------------------------
+wire [`SDRAM_DEPTH-1:0]	fml_brg_adr,
+			fml_vga_adr,
+			fml_tmur_adr,
+			fml_tmuw_adr;
+
+wire			fml_brg_stb,
+			fml_vga_stb,
+			fml_tmur_stb,
+			fml_tmuw_stb;
+
+wire			fml_brg_we;
+
+wire			fml_brg_ack,
+			fml_vga_ack,
+			fml_tmur_ack,
+			fml_tmuw_ack;
+
+wire [3:0]		fml_brg_sel,
+			fml_tmuw_sel;
+
+wire [31:0]		fml_brg_dw,
+			fml_tmuw_dw;
+
+wire [31:0]		fml_brg_dr,
+			fml_vga_dr,
+			fml_tmur_dr;
+
+
+
+wire [`SDRAM_DEPTH-1:0] fml_adr;
+wire fml_stb;
+wire fml_we;
+wire fml_ack;
+wire [3:0] fml_sel;
+wire [31:0] fml_di;
+wire [31:0] fml_do;
+
+wire sdram_dq_t;
+wire [15:0] sdram_dq_mon;
+wire [1:0] sdram_dqs_mon;
 
 
 wire	[31:0]	data_read_flash, addr_read, instr;
 wire	[3:0]	data_io;
-wire e_ , rs_, rw_;
+wire e_ , rw_;
 wire [5:0] slave_sel;
-assign led[5:2] = slave_sel;
-assign led[6] = cpudbus_we;
+assign led[7:2] = slave_sel;
 
-wire sdram_dq_t;
-wire [15:0] sdram_dq_mon;
+//assign led[7:6] = {sys_rst, sys_clk};//sdram_dqs_mon;
+//assign led[7:6] = {fml_dr_ddr == 32'habadface, (fml_dr_ddr == 32'habadface) & fml_brg_stb};
+
+
+/*bufg_n_bit #(
+	.size(16)
+	)
+buf_ddr(
+	.in(sdram_dq),
+	.out(sdram_dq_mon)
+);
+*/
+//wire [15:0] sdram_dq_mon;
+//assign sdram_dq_mon = (~sdram_dq_t) ? sdram_dq : 16'bZ;
+
+
+
+
+wire clk_;
+DDR_reg clock_ (
+	.Q(clk_),
+	.C0(sys_clk),
+	.C1(sys_clk_n),
+	.CE(1'b1),
+	.D0(1'b1),
+	.D1(1'b0),
+	.R(1'b0),
+	.S(1'b0)
+);
+
+
+
+wire [31:0] phase_counter, counter_a, counter_b, pulses_counter;
+
+/*
+reg start_stop;
+
+always @(sys_clk) begin
+	if (sys_rst)
+		start_stop <= 1'b0;
+	else if (fml_brg_stb & (fml_brg_dw == 32'habadface) & fml_brg_we)
+		start_stop <= 1'b1;
+	else 
+		start_stop <= 1'b0;
+end
+*/
+
+
+wire start_stop;
+
+reg [2:0] delay_reg;
+
+always @(posedge sys_clk) begin
+	if (sys_rst)
+		delay_reg <= 3'b0;
+	else if (fml_brg_stb == 1'b1)
+		delay_reg <= 3'b0;
+	else if ((fml_brg_stb == 1'b0) & (delay_reg[2] == 0))
+		delay_reg <= delay_reg+3'b001;
+	else
+		delay_reg <= delay_reg;
+		
+end
+
+assign start_stop = (fml_brg_stb | ~delay_reg[2]) & ((fml_brg_dw == 32'habadface)  ^ ~sw[0] ) & (fml_brg_we ^ ~sw[0]) & (sw[0] ^ (data_out_b == 32'hefecadab));
+
+
+//assign led[7:6] = rot;
+//assign led[7] = start_stop;
+
+
+//########################################################
+/////////////////////////////////////////////////////
+//////////////////////////////////////////////////////
+
+
+
+
+wire [10:0] x;
+wire [9:0] y;
+wire [19:0] state, buf_graph;
+wire [31:0] di_a_mon, di_buf_mon;
+
+sampling  #(
+	.data_size(119),	//20
+	.state_size(20),
+	.mem_width(5)
+)sampling(
+	//.clk_fb_main(clk_50Mhz),
+	//.clk_50Mhz(clk_50Mhz),//clkin
+
+	//.sys_rst(sys_rst),
+	.sys_rst(sys_rst),//dcm_rst
+	.rst_in(rst1),
+
+	.in_dcm(sys_clk),//clkin//
+
+	.rot(rot),
+
+	.start_stop(start_stop),
+
+	// sampling signals
+	.clk(sdram_dq_t),//clk_//sys_clk//clk_
+		
+	.stb(fml_stb_ddr),////sdram_dqs_mon[0]
+//	.we(fml_we_ddr),
+	.we(sdram_dqs_mon[1]),//sdram_dq_t//
+	.dqs(sdram_dqs_mon),
+	.dq(sdram_dq_mon),
+	.do(fml_dr_ddr),
+	.di(fml_dw_ddr),////di_buf_mon
+	.dr_fml(fml_brg_dr),//di_a_mon
+	.ack(fml_ack_ddr),
+	.state(state),
+	.buf_graph(buf_graph),
+
+	.x_in(x),
+//	.y(y),
+
+	.phase_counter(phase_counter)
+	//.pulses_counter(pulses_counter),
+	//.counter_a(counter_a),
+	//.counter_b(counter_b)
+
+);
+
+
+vga_controller vga_cnt(
+	.clk(clk_50Mhz), 
+	.rst(resetin),
+	.hsync(vga_hsync),
+	.vsync(vga_vsync),
+	.x(x),
+	.y(y)
+);
+
+graph #(
+	.samples(25),
+	.data_width(20),
+	.height(10)
+) graph (
+	.clk(clk_50Mhz),//sample_clk
+	.rst(resetin),
+	.x(x),
+	.y(y),
+	.state(state),/////////////////mem_dat_r
+	.buf_data(buf_graph),
+	.rgb_out(rgb)
+);
+
+
+
+
+
+
+
+
+
+
+////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////
+
 //---------------------------------------------------------------------------
 // Wishbone switch
 //---------------------------------------------------------------------------
@@ -429,6 +748,17 @@ conbus #(
 	.m4_cyc_i(1'b0),
 	.m4_stb_i(1'b0),
 	.m4_ack_o(),
+	// Master 5
+	.m5_dat_i(32'bx),
+	.m5_dat_o(),
+	.m5_adr_i(32'bx),
+	.m5_cti_i(3'bx),
+	.m5_we_i(1'bx),
+	.m5_sel_i(4'bx),
+	.m5_cyc_i(1'b0),
+	.m5_stb_i(1'b0),
+	.m5_ack_o(),
+
 
 	// Slave 0
 	.s0_dat_i(norflash_dat_r),
@@ -439,7 +769,7 @@ conbus #(
 	.s0_stb_o(norflash_stb),
 	.s0_ack_i(norflash_ack),
 	// Slave 1
-	.s1_dat_i(32'bx),
+	.s1_dat_i(32'bx),//bram_dat_r
 	.s1_dat_o(bram_dat_w),
 	.s1_adr_o(bram_adr),
 	.s1_cti_o(bram_cti),
@@ -447,7 +777,7 @@ conbus #(
 	.s1_we_o(bram_we),
 	.s1_cyc_o(bram_cyc),
 	.s1_stb_o(bram_stb),
-	.s1_ack_i(1'b0),
+	.s1_ack_i(1'b0),//bram_ack
 	// Slave 2
 	.s2_dat_i(brg_dat_r),
 	.s2_dat_o(brg_dat_w),
@@ -468,13 +798,22 @@ conbus #(
 	.s3_ack_i(csrbrg_ack),
 	// Slave 4
 	.s4_dat_i(32'bx),
-	.s4_dat_o(uart_dat_w),
-	.s4_adr_o(uart_adr),
-	.s4_we_o(uart_we),
-	.s4_sel_o(uart_sel),
-	.s4_cyc_o(uart_cyc),
-	.s4_stb_o(uart_stb),
-	.s4_ack_i(1'b0)
+	.s4_dat_o(),
+	.s4_adr_o(),
+	.s4_we_o(),
+	.s4_sel_o(),
+	.s4_cyc_o(),
+	.s4_stb_o(),
+	.s4_ack_i(1'b0),
+	// Slave 5
+	.s5_dat_i(32'bx),
+	.s5_dat_o(),
+	.s5_adr_o(),
+	.s5_we_o(),
+	.s5_sel_o(),
+	.s5_cyc_o(),
+	.s5_stb_o(),
+	.s5_ack_i(1'b0)
 );
 
 //------------------------------------------------------------------
@@ -546,6 +885,9 @@ assign cpu_interrupt = {19'd0,
 	gpio_irq
 };
 
+
+
+
 //---------------------------------------------------------------------------
 // LM32 CPU
 //---------------------------------------------------------------------------
@@ -594,6 +936,8 @@ lm32_top cpu(
 	.D_ERR_I(1'b0),
 	.D_RTY_I(1'b0)
 );
+
+
 
 //---------------------------------------------------------------------------
 // Boot ROM
@@ -655,45 +999,6 @@ bram #(
 
 
 
-//------------------------------------------------------------------
-// FML master wires
-//------------------------------------------------------------------
-wire [`SDRAM_DEPTH-1:0]	fml_brg_adr,
-			fml_vga_adr,
-			fml_tmur_adr,
-			fml_tmuw_adr;
-
-wire			fml_brg_stb,
-			fml_vga_stb,
-			fml_tmur_stb,
-			fml_tmuw_stb;
-
-wire			fml_brg_we;
-
-wire			fml_brg_ack,
-			fml_vga_ack,
-			fml_tmur_ack,
-			fml_tmuw_ack;
-
-wire [3:0]		fml_brg_sel,
-			fml_tmuw_sel;
-
-wire [31:0]		fml_brg_dw,
-			fml_tmuw_dw;
-
-wire [31:0]		fml_brg_dr,
-			fml_vga_dr,
-			fml_tmur_dr;
-
-
-
-wire [`SDRAM_DEPTH-1:0] fml_adr;
-wire fml_stb;
-wire fml_we;
-wire fml_ack;
-wire [3:0] fml_sel;
-wire [31:0] fml_di;
-wire [31:0] fml_do;
 
 //---------------------------------------------------------------------------
 // FML arbiter
@@ -783,13 +1088,7 @@ fmlbrg_b #(
 
 ////////////////////////////////////////////////////
 ///////////////////////////////////////////////////
-wire [`SDRAM_DEPTH-1:0] fml_adr_ddr;
-wire fml_stb_ddr;
-wire fml_we_ddr;
-wire fml_ack_ddr;
-wire [3:0] fml_sel_ddr;
-wire [31:0] fml_dw_ddr;
-wire [31:0] fml_dr_ddr;
+
 
 
 
@@ -861,9 +1160,13 @@ interface_ddr_16_bit_b interface(
 ddram #(
 	.csr_addr(4'h2)
 ) ddram (
-	.sys_clk(sys_clk),
+	.clk_in(sys_clk),//clk_100Mhz//
+	.clk_fb(sys_clk_fb),
 	.sys_clk_n(sys_clk_n),
-	.sys_rst(sys_rst),
+	.sys_clk(sys_clk),
+	.sys_rst(sys_rst),//dcm_rst
+	
+	.rst_in(rst1),
 
 	.csr_a(csr_a),
 	.csr_we(csr_we),
@@ -891,7 +1194,10 @@ ddram #(
 	.sdram_dq(sdram_dq),
 	.sdram_dqs(sdram_dqs),
 	.sdram_dq_t(sdram_dq_t),
-	.sdram_dq_mon(sdram_dq_mon)
+	.sdram_dq_mon(sdram_dq_mon),
+	.sdram_dqs_mon(sdram_dqs_mon),
+	.di_a_mon(di_a_mon),
+	.di_buf_mon(di_buf_mon)
 );
 
 
@@ -1063,8 +1369,7 @@ assign led[1] = rxled;
 //---------------------------------------------------------------------------
 // System Controller
 //---------------------------------------------------------------------------
-wire [13:0] gpio_outputs;
-wire [31:0] data_out, data_out_b, data_out_c, data_out_d;
+
 
 sysctl #(
 	.csr_addr(4'h1),
@@ -1219,6 +1524,14 @@ always @(posedge sys_clk) begin
 			data_a <= data_out_c ;
 			data_b <= data_out_d; 			
 		end
+		4'b1000: begin
+			data_a <= phase_counter ;
+			data_b <= pulses_counter; 			
+		end
+		4'b1100: begin
+			data_a <= counter_a ;
+			data_b <= counter_b; 			
+		end
 		default: begin
 			data_a <= cpudbus_adr ;
 			data_b <= cpudbus_dat_r;
@@ -1242,7 +1555,7 @@ assign flash_d[11:8] = (~flash_byte_n & ~rw) ? data_io[3:0] : 4'bZ;
 
 lcd #(
 
-
+/*
 	.width_timer(21),
 	.timer_135k(26),	// periodo de 1.3us
 	.timer_40ms(11539),	// 15 ms.. 11539
@@ -1253,6 +1566,17 @@ lcd #(
 	.timer_4_1ms(3154),	// 4.1ms.. 3154
 	.timer_500ms(769231)	// 1s.. 769231
 
+
+*/
+	.width_timer(21),
+	.timer_135k(1300/`CLOCK_PERIOD_),	// periodo de 1.3us
+	.timer_40ms(11539),	// 15 ms.. 11539
+	.timer_37us(31),	//40 us
+	.timer_1_52ms(1270),	//1.65ms .. 1270
+	.timer_1us(38),		// 1.05us
+	.timer_100us(77),	// 100us
+	.timer_4_1ms(3154),	// 4.1ms.. 3154
+	.timer_500ms(192300)	// .25s.. 769231
 
 
 )  lcd (
@@ -1266,7 +1590,7 @@ lcd #(
 //	.buffer_data(31'h1234abcd),
 	.buffer_data(data_a),
 	.rst(sys_rst),
-	.clk(sys_clk),
+	.clkin(sys_clk),
 	.e(e),
 	.rs(rs),
 	.rw(rw_),
@@ -1375,6 +1699,13 @@ assign phy_mii_clk = 1'b0;
 assign phy_mii_data = 1'bz;
 `endif
 
+
+
+
+
+
+
+
 //always @(posedge clk50) phy_clk <= ~phy_clk;
 //wire [15:0] sdram_dq_mon;
 //assign sdram_dq_mon = (~sdram_dq_t) ? sdram_dq : 16'bZ;
@@ -1403,9 +1734,6 @@ system_monitor sys_mon(
 	.uart_rx_mon(uart_rx_mon)
 );
 */
-
-
-
 
 
 

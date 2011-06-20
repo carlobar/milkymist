@@ -20,16 +20,16 @@
  */
 `define CLKDV_DIVIDE 	2.0
 
-`define CLKFX_MULTIPLY 	4.0
+`define CLKFX_MULTIPLY 	8.0
 `define CLKFX_DIVIDE 	5.0
 
-`define CLOCK_FREQUENCY 40000000// 83333333//
+`define CLOCK_FREQUENCY 80000000// 83333333//
 
 /*
  * System clock period in ns (must be in sync with CLOCK_FREQUENCY).
  */
-`define CLOCK_PERIOD 25//12//
-
+`define CLOCK_PERIOD 12.5//25//12.5//12//
+`define CLOCK_PERIOD_ 12//25//12.5//12//
 
 /*
  * Default baudrate for the debug UART.

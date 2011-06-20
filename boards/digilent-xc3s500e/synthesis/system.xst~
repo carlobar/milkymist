@@ -2,8 +2,13 @@ run
 -ifn system.prj
 -top system
 -ifmt MIXED
--opt_mode AREA
 -opt_level 2
 -ofn system.ngc
--p xc3s400a-ft256-4
+-p xc3s500e-fg320-5
 -register_balancing yes
+-opt_mode SPEED
+-iuc yes
+-keep_hierarchy no
+-glob_opt allclocknets
+-MAX_FANOUT 50
+-iob auto

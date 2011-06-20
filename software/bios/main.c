@@ -349,6 +349,8 @@ static void do_command(char *c)
 	else if(strcmp(token, "reboot") == 0) reboot();
 	
 	else if(strcmp(token, "help") == 0) help();
+
+	else if(strcmp(token, "print_lcd") == 0) print_lcd();
 	
 	else if(strcmp(token, "") != 0)
 		printf("Command not found\n");

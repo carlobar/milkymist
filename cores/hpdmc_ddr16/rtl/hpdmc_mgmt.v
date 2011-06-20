@@ -20,6 +20,7 @@ module hpdmc_mgmt #(
 	parameter sdram_columndepth = 10
 ) (
 	input sys_clk,
+	input sys_clk_n,
 	input sdram_rst,
 	
 	input [2:0] tim_rp,
@@ -29,7 +30,7 @@ module hpdmc_mgmt #(
 	
 	input stb,
 	input we,
-	input [sdram_depth-1-1:0] address, /* in 64-bit words */
+	input [sdram_depth-1-1:0] address, /* in 32-bit words */
 	output reg ack,
 	
 	output reg read,
@@ -39,10 +40,10 @@ module hpdmc_mgmt #(
 	input write_safe,
 	input [3:0] precharge_safe,
 	
-	output sdram_cs_n,
-	output sdram_we_n,
-	output sdram_cas_n,
-	output sdram_ras_n,
+	output reg sdram_cs_n,
+	output reg sdram_we_n,
+	output reg sdram_cas_n,
+	output reg sdram_ras_n,
 	output [12:0] sdram_adr,
 	output [1:0] sdram_ba
 );
@@ -80,7 +81,7 @@ reg [3:0] has_openrow;
 reg [rowdepth-1:0] openrows[0:3];
 reg [3:0] track_close;
 reg [3:0] track_open;
-
+/*
 always @(posedge sys_clk) begin
 	if(sdram_rst) begin
 		has_openrow = 4'h0;
@@ -104,6 +105,21 @@ always @(posedge sys_clk) begin
 		else if(track_close[3]) openrows[3] <= {`rowsize{1'bx}};
 	end
 end
+*/
+
+always @(posedge sys_clk) begin
+	if(sdram_rst) begin
+		has_openrow = 4'h0;
+	end else begin
+		has_openrow = (has_openrow | track_open) & ~track_close;
+		
+		if(track_open[0]) openrows[0] <= row_address;
+		if(track_open[1]) openrows[1] <= row_address;
+		if(track_open[2]) openrows[2] <= row_address;
+ 		if(track_open[3]) openrows[3] <= row_address;
+	end
+end
+
 
 /* Bank precharge safety */
 assign concerned_bank = bank_address_onehot;
@@ -116,7 +132,21 @@ wire current_precharge_safe =
 
 /* Check for page hits */
 wire bank_open = has_openrow[bank_address];
+
+
 wire page_hit = bank_open & (openrows[bank_address] == row_address);
+/*
+reg page_hit;
+always @(posedge sys_clk_n) begin
+	if(sdram_rst) begin
+		page_hit = 1'h0;
+	end else begin
+		page_hit = bank_open & (openrows[bank_address] == row_address);
+	end
+
+end
+*/
+
 
 /* Address drivers */
 reg sdram_adr_loadrow;
@@ -134,11 +164,12 @@ reg sdram_cs;
 reg sdram_we;
 reg sdram_cas;
 reg sdram_ras;
+/*
 assign sdram_cs_n = ~sdram_cs;
 assign sdram_we_n = ~sdram_we;
 assign sdram_cas_n = ~sdram_cas;
 assign sdram_ras_n = ~sdram_ras;
-
+*/
 /* Timing counters */
 
 /* The number of clocks we must wait following a PRECHARGE command (usually tRP). */
@@ -218,12 +249,17 @@ always @(*) begin
 	reload_activate_counter = 1'b0;
 	reload_refresh_counter = 1'b0;
 	reload_autorefresh_counter = 1'b0;
-	
+	/*
 	sdram_cs = 1'b1;
 	sdram_we = 1'b0;
 	sdram_cas = 1'b0;
 	sdram_ras = 1'b0;
-	
+	*/
+	sdram_cs_n = 1'b0;
+	sdram_we_n = 1'b1;
+	sdram_cas_n = 1'b1;
+	sdram_ras_n = 1'b1;
+
 	sdram_adr_loadrow = 1'b0;
 	sdram_adr_loadcol = 1'b0;
 	sdram_adr_loadA10 = 1'b0;
@@ -246,10 +282,10 @@ always @(*) begin
 						if(we) begin
 							if(write_safe) begin
 								/* Write */
-								sdram_cs = 1'b1;
-								sdram_ras = 1'b0;
-								sdram_cas = 1'b1;
-								sdram_we = 1'b1;
+								sdram_cs_n = 1'b0;
+								sdram_ras_n = 1'b1;
+								sdram_cas_n = 1'b0;
+								sdram_we_n = 1'b0;
 								sdram_adr_loadcol = 1'b1;
 								//sdram_adr_loadA10 = 1'b1;////////				
 								write = 1'b1;
@@ -258,10 +294,10 @@ always @(*) begin
 						end else begin
 							if(read_safe) begin
 								/* Read */
-								sdram_cs = 1'b1;
-								sdram_ras = 1'b0;
-								sdram_cas = 1'b1;
-								sdram_we = 1'b0;
+								sdram_cs_n = 1'b0;
+								sdram_ras_n = 1'b1;
+								sdram_cas_n = 1'b0;
+								sdram_we_n = 1'b1;
 								sdram_adr_loadcol = 1'b1;
 								
 								read = 1'b1;
@@ -272,10 +308,10 @@ always @(*) begin
 						if(bank_open) begin
 							if(current_precharge_safe) begin
 								/* Precharge Bank */
-								sdram_cs = 1'b1;
-								sdram_ras = 1'b1;
-								sdram_cas = 1'b0;
-								sdram_we = 1'b1;
+								sdram_cs_n = 1'b0;
+								sdram_ras_n = 1'b0;
+								sdram_cas_n = 1'b1;
+								sdram_we_n = 1'b0;
 								//sdram_adr_loadA10 = 1'b1;
 								track_close = bank_address_onehot;//4'b1111; //
 								reload_precharge_counter = 1'b1;
@@ -283,10 +319,10 @@ always @(*) begin
 							end
 						end else begin
 							/* Activate */
-							sdram_cs = 1'b1;
-							sdram_ras = 1'b1;
-							sdram_cas = 1'b0;
-							sdram_we = 1'b0;
+							sdram_cs_n = 1'b0;
+							sdram_ras_n = 1'b0;
+							sdram_cas_n = 1'b1;
+							sdram_we_n = 1'b1;
 							sdram_adr_loadrow = 1'b1;
 							
 							track_open = bank_address_onehot;
@@ -303,10 +339,10 @@ always @(*) begin
 		
 		ACTIVATE: begin
 			if(precharge_done) begin
-				sdram_cs = 1'b1;
-				sdram_ras = 1'b1;
-				sdram_cas = 1'b0;
-				sdram_we = 1'b0;
+				sdram_cs_n = 1'b0;
+				sdram_ras_n = 1'b0;
+				sdram_cas_n = 1'b1;
+				sdram_we_n = 1'b1;
 				sdram_adr_loadrow = 1'b1;
 				
 				track_open = bank_address_onehot;
@@ -320,10 +356,10 @@ always @(*) begin
 		READ: begin
 			if(activate_done) begin
 				if(read_safe) begin
-					sdram_cs = 1'b1;
-					sdram_ras = 1'b0;
-					sdram_cas = 1'b1;
-					sdram_we = 1'b0;
+					sdram_cs_n = 1'b0;
+					sdram_ras_n = 1'b1;
+					sdram_cas_n = 1'b0;
+					sdram_we_n = 1'b1;
 					sdram_adr_loadcol = 1'b1;
 					
 					read = 1'b1;
@@ -335,10 +371,10 @@ always @(*) begin
 		WRITE: begin
 			if(activate_done) begin
 				if(write_safe) begin
-					sdram_cs = 1'b1;
-					sdram_ras = 1'b0;
-					sdram_cas = 1'b1;
-					sdram_we = 1'b1;
+					sdram_cs_n = 1'b0;
+					sdram_ras_n = 1'b1;
+					sdram_cas_n = 1'b0;
+					sdram_we_n = 1'b0;
 					sdram_adr_loadcol = 1'b1;
 					//sdram_adr_loadA10 = 1'b1;////////
 					write = 1'b1;
@@ -350,10 +386,10 @@ always @(*) begin
 		
 		PRECHARGEALL: begin
 			if(precharge_safe == 4'b1111) begin
-				sdram_cs = 1'b1;
-				sdram_ras = 1'b1;
-				sdram_cas = 1'b0;
-				sdram_we = 1'b1;
+				sdram_cs_n = 1'b0;
+				sdram_ras_n = 1'b0;
+				sdram_cas_n = 1'b1;
+				sdram_we_n = 1'b0;
 				sdram_adr_loadA10 = 1'b1;
 	
 				reload_precharge_counter = 1'b1;
@@ -365,10 +401,10 @@ always @(*) begin
 		end
 		AUTOREFRESH: begin
 			if(precharge_done) begin
-				sdram_cs = 1'b1;
-				sdram_ras = 1'b1;
-				sdram_cas = 1'b1;
-				sdram_we = 1'b0;
+				sdram_cs_n = 1'b0;
+				sdram_ras_n = 1'b0;
+				sdram_cas_n = 1'b0;
+				sdram_we_n = 1'b1;
 				reload_refresh_counter = 1'b1;
 				reload_autorefresh_counter = 1'b1;
 				next_state = AUTOREFRESH_WAIT;

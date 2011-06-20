@@ -4,7 +4,6 @@ BOARD_SRC=$(wildcard $(BOARD_DIR)/*.v) $(BOARD_DIR)/../../gen_capabilities.v
 
 #========= Comunicación serial
 UART_SRC=$(wildcard $(CORES_DIR)/uart/rtl/*.v)
-WB_UART_SRC=$(wildcard $(CORES_DIR)/wb_uart/rtl/*.v)
 
 ASFIFO_SRC=$(wildcard $(CORES_DIR)/asfifo/rtl/*.v)
 
@@ -76,4 +75,4 @@ MONITOR_SRC=$(wildcard $(CORES_DIR)/monitor/rtl/*.v)
 
 
 #========= Todos los cores que se definen
-CORES_SRC=$(CONBUS_SRC) $(LM32_SRC) $(CSRBRG_SRC) $(NORFLASH_SRC) $(BRAM_SRC) $(UART_SRC) $(WB_UART_SRC) $(ASFIFO_SRC) $(SYSCTL_SRC) $(HPDMC_SRC)  $(VGAFB_SRC) $(LCD_SRC) $(DDR_SRC) $(ETHERNET_SRC) $(FMLARB_SRC) $(FMLBRG_SRC) $(INTERFACE16_SRC) $(MONITOR_SRC)
+CORES_SRC=$(CONBUS_SRC) $(LM32_SRC) $(CSRBRG_SRC) $(NORFLASH_SRC) $(BRAM_SRC) $(UART_SRC) $(ASFIFO_SRC) $(SYSCTL_SRC) $(HPDMC_SRC)  $(VGAFB_SRC) $(LCD_SRC) $(DDR_SRC) $(ETHERNET_SRC) $(FMLARB_SRC) $(FMLBRG_SRC) $(INTERFACE16_SRC) $(MONITOR_SRC)

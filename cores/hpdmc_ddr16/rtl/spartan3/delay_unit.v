@@ -7,13 +7,12 @@ module delay_unit #(
 );
 
 wire [LUTs:0] data;
-//wire [LUTs-1:0] sel;
 assign out = data[LUTs];
-
+assign data[0] = 1'b0;
 genvar i;
 generate
 	for (i=0; i< LUTs; i=i+1) begin: LUTs_gen
-		LUT n(in, data[i], sel[i], data[i+1]);
+		LUT LUT_i( .a(in), .b(data[i]), .sel(sel[i]), .out(data[i+1]) );
 	end
 endgenerate
 

@@ -902,7 +902,7 @@ module ddr (Clk, Clk_n, Cke, Cs_n, Ras_n, Cas_n, We_n, Ba , Addr, Dm, Dq, Dqs);
         // Activate Block
         if (Active_enable === 1'b1) begin
             if (!(power_up_done)) begin
-                $display ("%m: %m: at time %t ERROR: Power Up and Initialization Sequence not completed before executing Activate command", $time);
+                $display ("%m: %m: at time %t ERROR: Power Up and Initialization Sequence not completed before executing Activate command, act = %x, cs_n = %x, ras_n = %x, cas_n = %x, we_n = %x, prech = %x", $time, Active_enable, ~Cs_n , ~Ras_n ,  Cas_n , ~We_n, Prech_enable);
             end
             // Display DEBUG Message
             if (DEBUG) begin

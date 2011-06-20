@@ -150,7 +150,7 @@ always @(posedge sys_clk) begin
 		direction <= 1'b0;
 	end else begin
 		if(write_d) begin
-			counter_writedirection <= 3'b011;
+			counter_writedirection <= 3'b010;
 			direction <= 1'b1;
 		end else begin
 			if(counter_writedirection == 3'b001)

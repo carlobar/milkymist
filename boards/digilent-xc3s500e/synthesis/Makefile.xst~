@@ -4,7 +4,7 @@ CORES_DIR=../../../cores
 include ../sources.mak
 SRC=$(BOARD_SRC) $(CORES_SRC)
 
-all: build/system.bit 
+all: build/system.bit build/system.prj
 
 build/system.ucf: common.ucf xst.ucf
 	cat common.ucf xst.ucf > build/system.ucf

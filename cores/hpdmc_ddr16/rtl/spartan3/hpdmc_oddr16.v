@@ -25,7 +25,7 @@
 module hpdmc_oddr16 #(
 	parameter DDR_ALIGNMENT = "NONE",
 	parameter INIT = 1'b0,
-	parameter SRTYPE = "ASYNC"
+	parameter SRTYPE = "SYNC"
 ) (
 	output [15:0] Q,
 	input C0,
@@ -35,21 +35,6 @@ module hpdmc_oddr16 #(
 	input [15:0] D1,
 	input R,
 	input S
-);
-
-ODDR2_fixed #(
-	.DDR_ALIGNMENT(DDR_ALIGNMENT),
-	.INIT(INIT),
-	.SRTYPE(SRTYPE)
-) oddr0 (
-	.Q(Q[0]),
-	.C0(C0),
-	.C1(C1),
-	.CE(CE),
-	.D0(D0[0]),
-	.D1(D1[0]),
-	.R(R),
-	.S(S)
 );
 ODDR2_fixed #(
 	.DDR_ALIGNMENT(DDR_ALIGNMENT),
@@ -65,11 +50,28 @@ ODDR2_fixed #(
 	.R(R),
 	.S(S)
 );
+
+
 ODDR2_fixed #(
 	.DDR_ALIGNMENT(DDR_ALIGNMENT),
 	.INIT(INIT),
 	.SRTYPE(SRTYPE)
-) ODDR2_fixed (
+) oddr0 (
+	.Q(Q[0]),
+	.C0(C0),
+	.C1(C1),
+	.CE(CE),
+	.D0(D0[0]),
+	.D1(D1[0]),
+	.R(R),
+	.S(S)
+);
+
+ODDR2_fixed #(
+	.DDR_ALIGNMENT(DDR_ALIGNMENT),
+	.INIT(INIT),
+	.SRTYPE(SRTYPE)
+) oddr2 (
 	.Q(Q[2]),
 	.C0(C0),
 	.C1(C1),

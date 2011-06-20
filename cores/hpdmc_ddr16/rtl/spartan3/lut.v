@@ -5,7 +5,10 @@ input a;
 input b;
 input sel;
 output out;	
-reg out;
+
+
+
+/*
 always @(a or b or sel) begin
 	case(sel)
 		1'b0: 
@@ -14,6 +17,14 @@ always @(a or b or sel) begin
 			out = b;
 	endcase
 end
+*/
+
+
+LUT3 LUT3_mux (.O (out),
+                         .I0 (sel),
+                         .I1 (a),
+                         .I2 (b));
+defparam LUT3_mux.INIT = 8'he4; 
 
 
 endmodule
