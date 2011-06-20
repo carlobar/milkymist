@@ -110,7 +110,7 @@ bios.rom:
 	../../../tools/bin2hex $(BIN) bios.rom 35288
 
 clean:
-	rm -f verilog.log bios.rom system ${EXEC} ${EXEC}.vcd *~ make.log search.log *.list
+	rm -f verilog.log bios.rom system ${EXEC} ${EXEC}.vcd *~ make.log search.log *.list *.png
 
 .PHONY: clean cversim isim
 

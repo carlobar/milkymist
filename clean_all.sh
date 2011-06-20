@@ -20,9 +20,9 @@ cd $BASEDIR/software/demo && make clean
 
 cd $BASEDIR/softusb-input && make clean
 
-cd $BASEDIR/boards/milkymist-one/synthesis && make -f common.mak clean
-cd $BASEDIR/boards/milkymist-one/standby && make clean
-cd $BASEDIR/boards/milkymist-one/flash && make clean
+cd $BASEDIR/boards/digilent-xc3s500e/synthesis && make -f common.mak clean
+cd $BASEDIR/boards/digilent-xc3s500e/test && make clean
+
 
 cd $BASEDIR/doc && make clean
 for i in $COREDOC; do
@@ -35,3 +35,4 @@ cd $BASEDIR/cores/pfpu
 cd $BASEDIR
 
 rm -f tools.log software.log synthesis.log doc.log load.log
+rm -rf boards/digilent-xc3s500e/synthesis/build/*
