@@ -109,16 +109,18 @@ static int process_top_assign(char *left, char *right)
 		return 1;
 	}
 
-	if(strncmp(left, "per_frame_", 10) == 0)
+	if(strncmp(left, "per_frame", 9) == 0)
 		/* per-frame equation */
 		return process_equations(right, 0);
 
-	if((strncmp(left, "per_vertex_", 11) == 0) || (strncmp(left, "per_pixel_", 10) == 0))
+	if((strncmp(left, "per_vertex", 10) == 0) || (strncmp(left, "per_pixel", 9) == 0))
 		/* per-vertex equation */
 		return process_equations(right, 1);
 
+#ifdef RENDERER_DEBUG
 	printf("RDR: warning l.%d: ignoring unknown parameter %s\n", linenr, left);
-	
+#endif
+
 	return 1;
 }
 
@@ -176,7 +178,10 @@ int renderer_start(char *patch_code)
 	if(!eval_schedule()) return 0;
 	apipe_start();
 	renderer_on = 1;
+	vga_set_console(0);
+#ifdef RENDERER_DEBUG
 	printf("RDR: started\n");
+#endif
 	return 1;
 }
 
@@ -198,13 +203,18 @@ int renderer_idone()
 	if(!eval_schedule()) return 0;
 	apipe_start();
 	renderer_on = 1;
+	vga_set_console(0);
+#ifdef RENDERER_DEBUG
 	printf("RDR: started\n");
+#endif
 	return 1;
 }
 
 void renderer_stop()
 {
+#ifdef RENDERER_DEBUG
 	printf("RDR: stopped\n");
+#endif
 	renderer_on = 0;
 	apipe_stop();
 }

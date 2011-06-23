@@ -61,6 +61,9 @@ VGAFB_SRC=$(wildcard $(CORES_DIR)/vgafb/rtl/*.v)
 #========= ethernet
 ETHERNET_SRC=$(wildcard $(CORES_DIR)/minimac/rtl/*.v)
 
+#========= ethernet_b
+ETHERNET_B_SRC=$(wildcard $(CORES_DIR)/minimac2/rtl/*.v)
+
 #========= FML arbiter
 FMLARB_SRC=$(wildcard $(CORES_DIR)/fmlarb/rtl/*.v)
 
@@ -78,4 +81,4 @@ VGA_CNT_SRC=$(wildcard $(CORES_DIR)/vga_controller/rtl/*.v)
 
 
 #========= Todos los cores que se definen
-CORES_SRC=$(CONBUS_SRC) $(LM32_SRC) $(CSRBRG_SRC) $(NORFLASH_SRC) $(BRAM_SRC) $(UART_SRC) $(ASFIFO_SRC) $(SYSCTL_SRC) $(HPDMC_SRC) $(VGA_CNT_SRC) $(VGAFB_SRC) $(LCD_SRC) $(DDR_SRC) $(ETHERNET_SRC) $(FMLARB_SRC) $(FMLBRG_SRC) $(INTERFACE16_SRC) $(MONITOR_SRC)
+CORES_SRC=$(CONBUS_SRC) $(LM32_SRC) $(CSRBRG_SRC) $(NORFLASH_SRC) $(BRAM_SRC) $(UART_SRC) $(ASFIFO_SRC) $(SYSCTL_SRC) $(HPDMC_SRC) $(VGA_CNT_SRC) $(VGAFB_SRC) $(LCD_SRC) $(DDR_SRC) $(ETHERNET_SRC) $(ETHERNET_B_SRC) $(FMLARB_SRC) $(FMLBRG_SRC) $(INTERFACE16_SRC) $(MONITOR_SRC)

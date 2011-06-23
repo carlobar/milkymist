@@ -14,16 +14,34 @@ module system_tb();
 
   end
 
+/*
+reg GSR; 
+assign glbl.GSR = GSR; 
+reg GTS; 
+assign glbl.GTS = GTS; 
+initial begin 
+GSR = 1; GTS = 1; 
+#100 GSR = 0; GTS = 0; 
+end 
+*/
 
 reg sys_clk;
 reg resetin;
+
+reg [31:0] addr_ofset;
+
+initial addr_ofset = 32'h00860000;
+
+reg [31:0] address;
+
+always @(*) address = flash_adr - addr_ofset;
 
 wire [23:0] flash_adr;
 reg [31:0] flash_d;
 reg [15:0] flash_d16_o;
 wire [15:0] flash_d16_i;
 wire [15:0] flash_d16;
-reg [31:0] flash[0:35288];
+reg [31:0] flash[0:100000];
 
 wire clk_p, clk_n;
 wire flash_we_n;
@@ -57,7 +75,7 @@ end
 initial $readmemh("bios.rom", flash);
 always @(flash_adr) begin
 	#10;
-	flash_d = flash[flash_adr[23:2]];
+	flash_d = flash[address[23:2]];
 	case(flash_adr[1])
 		2'b0: flash_d16_o = flash_d[31:16];
 		2'b1: flash_d16_o = flash_d[15:0];

@@ -20,23 +20,32 @@
 #include <string.h>
 #include <console.h>
 #include <uart.h>
-#include <cffat.h>
+#include <blockdev.h>
+#include <fatfs.h>
 #include <system.h>
 #include <math.h>
 #include <irq.h>
 #include <board.h>
+#include <version.h>
 #include <hw/pfpu.h>
 #include <hw/tmu.h>
 #include <hw/sysctl.h>
 #include <hw/gpio.h>
 #include <hw/interrupts.h>
 #include <hw/minimac.h>
+#include <hw/bt656cap.h>
+#include <hw/rc5.h>
+#include <hw/midi.h>
+#include <hw/memcard.h>
+#include <hw/memtest.h>
 
 #include <hal/vga.h>
 #include <hal/snd.h>
 #include <hal/tmu.h>
 #include <hal/time.h>
 #include <hal/brd.h>
+#include <hal/vin.h>
+#include <hal/usb.h>
 
 #include "line.h"
 #include "wave.h"
@@ -44,7 +53,6 @@
 #include "cpustats.h"
 #include "memstats.h"
 #include "shell.h"
-#include "ui.h"
 #include "renderer.h"
 
 #define NUMBER_OF_BYTES_ON_A_LINE 16
@@ -144,7 +152,7 @@ static void mw(char *addr, char *value, char *count)
 			return;
 		}
 	}
-	for (i=0;i<count2;i++) *addr2++ = value2;
+	for(i=0;i<count2;i++) *addr2++ = value2;
 }
 
 static int lscb(const char *filename, const char *longname, void *param)
@@ -153,30 +161,126 @@ static int lscb(const char *filename, const char *longname, void *param)
 	return 1;
 }
 
-static void ls()
+static void ls(const char *dev)
 {
-	cffat_init();
-	cffat_list_files(lscb, NULL);
-	cffat_done();
+	if(!fatfs_init(BLOCKDEV_MEMORY_CARD)) return;
+	fatfs_list_files(lscb, NULL);
+	fatfs_done();
 }
 
-static void render(const char *filename)
+static void edid()
 {
+	char buf[256];
+
+	if(!vga_read_edid(buf)) {
+		printf("Failed to read EDID\n");
+		return;
+	}
+	dump_bytes((unsigned int *)buf, 256, 0);
+}
+
+static char patch_buf[8192];
+
+static void new()
+{
+	patch_buf[0] = 0;
+}
+
+static void del(const char *eqn)
+{
+	char *p, *p2;
+	char eqn2[256];
+	int l;
+
+	strcpy(eqn2, eqn);
+	l = strlen(eqn2);
+	eqn2[l++] = '=';
+	eqn2[l] = 0;
+
+	p = patch_buf;
+	while(1) {
+		if(strncmp(p, eqn2, l) == 0) {
+			p2 = p;
+			while((*p2 != '\n') && (*p2 != 0))
+				p2++;
+			if(*p2 == '\n')
+				p2++;
+			memmove(p, p2, strlen(patch_buf)-(p2-patch_buf)+2);
+			return;
+		}
+		while(*p != '\n') {
+			p++;
+			if(*p == 0)
+				return;
+		}
+		p++;
+	}
+}
+
+static void add(const char *eqn)
+{
+	int l;
+	char *c;
+
+	c = strchr(eqn, '=');
+	if(c == NULL) {
+		printf("Invalid equation\n");
+		return;
+	}
+	*c = 0;
+	del(eqn);
+	*c = '=';
+
+	/* FIXME: check for overflows... */
+	l = strlen(patch_buf);
+	strcpy(&patch_buf[l], eqn);
+	l += strlen(eqn);
+	patch_buf[l] = '\n';
+	patch_buf[l+1] = 0;
+}
+
+static void print()
+{
+	puts(patch_buf);
+}
+
+static void renderb()
+{
+	char patch_buf_copy[8192];
+
+	strcpy(patch_buf_copy, patch_buf);
+	renderer_start(patch_buf_copy);
+}
+
+static void renderf(const char *filename)
+{
+	char buffer[8192];
+	int size;
+
 	if(*filename == 0) {
-		printf("render <filename>\n");
+		printf("renderf <filename>\n");
 		return;
 	}
 
-	ui_render_from_file(filename, 0);
+	if(!fatfs_init(BLOCKDEV_MEMORY_CARD)) return;
+	if(!fatfs_load(filename, buffer, sizeof(buffer), &size)) return;
+	fatfs_done();
+	buffer[size] = 0;
+
+	renderer_start(buffer);
 }
 
-static void spam()
+static void vmode(const char *mode)
 {
-	spam_enabled = !spam_enabled;
-	if(spam_enabled)
-		printf("Advertising enabled\n");
-	else
-		printf("Advertising disabled\n");
+	char *c;
+	int mode2;
+
+	mode2 = strtoul(mode, &c, 0);
+	if(*c != 0) {
+		printf("incorrect mode\n");
+		return;
+	}
+	vga_set_mode(mode2);
 }
 
 static void stats()
@@ -209,21 +313,28 @@ static void stats()
 
 static void help()
 {
-	puts("Milkymist demo firmware\n");
+	puts("Milkymist(tm) demonstration program (PROOF OF CONCEPT ONLY!)\n");
 	puts("Available commands:");
-	puts("ls         - list files on the memory card");
-	puts("render     - start rendering a patch");
-	puts("irender    - input patch equations interactively");
-	puts("stop       - stop renderer");
-	puts("spam       - start/stop advertising");
-	puts("stats      - print system stats");
-	puts("reboot     - system reset");
+	puts("cons        - switch console mode");
+	puts("ls          - list files on the memory card");
+	puts("new         - clear buffer");
+	puts("add     [a] - add an equation to buffer");
+	puts("del     [d] - delete an equation from buffer");
+	puts("print   [p] - print buffer");
+	puts("renderb [r] - render buffer");
+	puts("renderf     - render file");
+	puts("renderi     - render console input");
+	puts("stop        - stop renderer");
+	puts("stats       - print system stats");
+	puts("version     - display version");
+	puts("reboot      - system reset");
+	puts("reconf      - reload FPGA configuration");
 }
 
 static void cpucfg()
 {
 	unsigned long cpu_cfg;
-	
+
 	__asm__ volatile(
 		"rcsr %0, cfg\n\t"
 		: "=r"(cpu_cfg)
@@ -252,15 +363,15 @@ static void cpucfg()
 static void loadpic(const char *filename)
 {
 	int size;
-	
+
 	if(*filename == 0) {
 		printf("loadpic <filename>\n");
 		return;
 	}
 
-	if(!cffat_init()) return;
-	if(!cffat_load(filename, (void *)vga_backbuffer, vga_hres*vga_vres*2, &size)) return;
-	cffat_done();
+	if(!fatfs_init(BLOCKDEV_MEMORY_CARD)) return;
+	if(!fatfs_load(filename, (void *)vga_backbuffer, vga_hres*vga_vres*2, &size)) return;
+	fatfs_done();
 
 	vga_swap_buffers();
 }
@@ -336,10 +447,7 @@ static void pfputest()
 	else
 		printf("Timeout\n");
 
-	asm volatile( /* Invalidate Level-1 data cache */
-		"wcsr DCC, r0\n"
-		"nop\n"
-	);
+	flush_cpu_dcache();
 
 	printf("Result:\n");
 	for(y=0;y<10;y++) {
@@ -403,7 +511,7 @@ static void tmutest()
 	td.dstsquarew = vga_hres/32;
 	td.dstsquareh = vga_vres/32;
 	td.alpha = TMU_ALPHA_MAX;
-	
+
 	td.callback = tmutest_callback;
 	td.user = (void *)&complete;
 
@@ -414,127 +522,8 @@ static void tmutest()
 	vga_swap_buffers();
 }
 
-static unsigned short original[640*480*2] __attribute__((aligned(2)));
-
-static void tmudemo()
-{
-	int size;
-	unsigned int oldmask;
-	static struct tmu_vertex srcmesh[TMU_MESH_MAXSIZE][TMU_MESH_MAXSIZE] __attribute__((aligned(8)));
-	struct tmu_td td;
-	volatile int complete;
-	int w, speed;
-	int mindelta, xdelta, ydelta;
-
-	if(!cffat_init()) return;
-	if(!cffat_load("lena.raw", (void *)original, vga_hres*vga_vres*2, &size)) return;
-	cffat_done();
-
-	printf("done\n");
-	
-	/* Disable UI keys and slowout */
-	oldmask = irq_getmask();
-	irq_setmask(oldmask & (~IRQ_GPIO) & (~IRQ_TIMER1));
-	
-	speed = 0;
-	w = 512 << TMU_FIXEDPOINT_SHIFT;
-
-	xdelta = 0;
-	ydelta = 0;
-	while(1) {
-		srcmesh[0][0].x = xdelta;
-		srcmesh[0][0].y = ydelta;
-		srcmesh[0][1].x = w+xdelta;
-		srcmesh[0][1].y = ydelta;
-		srcmesh[1][0].x = xdelta;
-		srcmesh[1][0].y = w+ydelta;
-		srcmesh[1][1].x = w+xdelta;
-		srcmesh[1][1].y = w+ydelta;
-
-		if(CSR_GPIO_IN & GPIO_DIP6) {
-			if(CSR_GPIO_IN & GPIO_PBN)
-				ydelta += 16;
-			if(CSR_GPIO_IN & GPIO_PBS)
-				ydelta -= 16;
-			if(CSR_GPIO_IN & GPIO_PBE)
-				xdelta += 16;
-			if(CSR_GPIO_IN & GPIO_PBW)
-				xdelta -= 16;
-		} else {
-			if(CSR_GPIO_IN & GPIO_PBN)
-				speed += 2;
-			if(CSR_GPIO_IN & GPIO_PBS)
-				speed -= 2;
-		}
-		w += speed;
-		if(w < 1) {
-			w = 1;
-			speed = 0;
-		}
-		if(xdelta > ydelta)
-			mindelta = ydelta;
-		else
-			mindelta = xdelta;
-		if(w > ((TMU_MASK_FULL >> 1)+mindelta)) {
-			w = (TMU_MASK_FULL >> 1)+mindelta;
-			speed = 0;
-		}
-		if(speed > 0) speed--;
-		if(speed < 0) speed++;
-		
-
-		td.flags = 0;
-		td.hmeshlast = 1;
-		td.vmeshlast = 1;
-		td.brightness = TMU_BRIGHTNESS_MAX;
-		td.chromakey = 0;
-		td.vertices = &srcmesh[0][0];
-		td.texfbuf = original;
-		td.texhres = vga_hres;
-		td.texvres = vga_vres;
-		td.texhmask = CSR_GPIO_IN & GPIO_DIP7 ? 0x7FFF : TMU_MASK_FULL;
-		td.texvmask = CSR_GPIO_IN & GPIO_DIP8 ? 0x7FFF : TMU_MASK_FULL;
-		td.dstfbuf = vga_backbuffer;
-		td.dsthres = vga_hres;
-		td.dstvres = vga_vres;
-		td.dsthoffset = 0;
-		td.dstvoffset = 0;
-		td.dstsquarew = vga_hres;
-		td.dstsquareh = vga_vres;
-		td.alpha = TMU_ALPHA_MAX;
-
-		td.callback = tmutest_callback;
-		td.user = (void *)&complete;
-
-		complete = 0;
-		flush_bridge_cache();
-		CSR_TIMER1_CONTROL = 0;
-		CSR_TIMER1_COUNTER = 0;
-		CSR_TIMER1_COMPARE = 0xffffffff;
-		CSR_TIMER1_CONTROL = TIMER_ENABLE;
-		tmu_submit_task(&td);
-		while(!complete);
-		CSR_TIMER1_CONTROL = 0;
-
-		if(readchar_nonblock()) {
-			char c;
-			c = readchar();
-			if(c == 'q') break;
-			if(c == 's') {
-				unsigned int t;
-				t = CSR_TIMER1_COUNTER;
-				printf("Processing cycles: %d (%d Mpixels/s)\n", t, 640*480*100/t);
-			}
-		}
-		vga_swap_buffers();
-	}
-	irq_ack(IRQ_GPIO|IRQ_TIMER1);
-	irq_setmask(oldmask);
-}
-
 static void tmubench()
 {
-	unsigned int oldmask;
 	int i;
 	int zoom;
 	int x, y;
@@ -545,11 +534,8 @@ static void tmubench()
 	unsigned int t;
 	int hits, reqs;
 
-	/* Disable slowout */
-	oldmask = irq_getmask();
-	irq_setmask(oldmask & (~IRQ_TIMER1));
 	uart_force_sync(1);
-	
+
 	for(i=0;i<512*512;i++)
 		texture[i] = i;
 	flush_bridge_cache();
@@ -598,8 +584,6 @@ static void tmubench()
 		vga_swap_buffers();
 	}
 
-	irq_ack(IRQ_TIMER1);
-	irq_setmask(oldmask);
 	uart_force_sync(0);
 }
 
@@ -644,6 +628,300 @@ static void echo()
 	}
 }
 
+static void cr(char *addr)
+{
+	unsigned int a;
+	char *c;
+
+	if(*addr == 0) {
+		printf("cr <address>\n");
+		return;
+	}
+	a = strtoul(addr, &c, 0);
+	if(*c != 0) {
+		printf("incorrect address\n");
+		return;
+	}
+
+	printf("%04x\n", snd_ac97_read(a));
+}
+
+static void cw(char *addr, char *value)
+{
+	unsigned int a, v;
+	char *c;
+
+	if((*addr == 0)||(*value == 0)) {
+		printf("cw <address> <value>\n");
+		return;
+	}
+	a = strtoul(addr, &c, 0);
+	if(*c != 0) {
+		printf("incorrect address\n");
+		return;
+	}
+	v = strtoul(value, &c, 0);
+	if(*c != 0) {
+		printf("incorrect value\n");
+		return;
+	}
+	snd_ac97_write(a, v);
+}
+
+static void readv(char *addr)
+{
+	unsigned char a;
+	char *c;
+
+	if(*addr == 0) {
+		printf("readv <address>\n");
+		return;
+	}
+	a = strtoul(addr, &c, 0);
+	if(*c != 0) {
+		printf("incorrect address\n");
+		return;
+	}
+
+	printf("%02x\n", vin_read_reg(a));
+}
+
+static void writev(char *addr, char *value)
+{
+	unsigned char a, v;
+	char *c;
+
+	if((*addr == 0)||(*value == 0)) {
+		printf("writev <address> <value>\n");
+		return;
+	}
+	a = strtoul(addr, &c, 0);
+	if(*c != 0) {
+		printf("incorrect address\n");
+		return;
+	}
+	v = strtoul(value, &c, 0);
+	if(*c != 0) {
+		printf("incorrect value\n");
+		return;
+	}
+
+	vin_write_reg(a, v);
+}
+
+static short vbuffer[720*288] __attribute__((aligned(32)));
+
+static void testv()
+{
+	int x, y;
+
+	irq_ack(IRQ_VIDEOIN);
+	CSR_BT656CAP_BASE = (unsigned int)vbuffer;
+	CSR_BT656CAP_FILTERSTATUS = BT656CAP_FILTERSTATUS_FIELD1;
+	printf("wait1 %d\n", CSR_TIMER0_COUNTER);
+	while(!(irq_pending() & IRQ_VIDEOIN));
+	irq_ack(IRQ_VIDEOIN);
+	printf("wait2 %d\n", CSR_TIMER0_COUNTER);
+	while(!(irq_pending() & IRQ_VIDEOIN));
+	irq_ack(IRQ_VIDEOIN);
+	CSR_BT656CAP_FILTERSTATUS = 0;
+	printf("wait3 %d\n", CSR_TIMER0_COUNTER);
+	while(CSR_BT656CAP_FILTERSTATUS & BT656CAP_FILTERSTATUS_INFRAME);
+	printf("done %d\n", CSR_TIMER0_COUNTER);
+	printf("nbursts=%d/%d\n", CSR_BT656CAP_DONEBURSTS, CSR_BT656CAP_MAXBURSTS);
+	flush_bridge_cache();
+	for(y=0;y<288;y++)
+		for(x=0;x<640;x++)
+			vga_frontbuffer[640*y+x] = vbuffer[720*y+x];
+	flush_bridge_cache();
+}
+
+static void irtest()
+{
+	unsigned int r;
+
+	irq_ack(IRQ_IR);
+	while(!readchar_nonblock()) {
+		if(irq_pending() & IRQ_IR) {
+			r = CSR_RC5_RX;
+			irq_ack(IRQ_IR);
+			printf("%04x - fld:%d ctl:%d sys:%d cmd:%d\n", r,
+				(r & 0x1000) >> 12,
+				(r & 0x0800) >> 11,
+				(r & 0x07c0) >> 6,
+				r & 0x003f);
+
+		}
+	}
+}
+
+static void midiprint()
+{
+	unsigned int r;
+	if(irq_pending() & IRQ_MIDIRX) {
+		r = CSR_MIDI_RXTX;
+		irq_ack(IRQ_MIDIRX);
+		printf("RX: %02x\n", r);
+	}
+}
+
+static void midirx()
+{
+	irq_ack(IRQ_MIDIRX);
+	while(!readchar_nonblock()) midiprint();
+}
+
+static void midisend(int c)
+{
+	printf("TX: %02x\n", c);
+	CSR_MIDI_RXTX = c;
+	while(!(irq_pending() & IRQ_MIDITX));
+	printf("TX done\n");
+	irq_ack(IRQ_MIDITX);
+	midiprint();
+}
+
+static void miditx(char *note)
+{
+	int note2;
+	char *c;
+
+	if(*note == 0) {
+		printf("miditx <note>\n");
+		return;
+	}
+	note2 = strtoul(note, &c, 0);
+	if(*c != 0) {
+		printf("incorrect note\n");
+		return;
+	}
+
+	midisend(0x90);
+	midisend(note2);
+	midisend(0x22);
+}
+
+static void readblock(char *b)
+{
+	char *c;
+	unsigned int b2;
+	unsigned int buf[128];
+	if(*b == 0) {
+		printf("readblock <block>\n");
+		return;
+	}
+	b2 = strtoul(b, &c, 0);
+	if(*c != 0) {
+		printf("incorrect block\n");
+		return;
+	}
+	bd_readblock(b2, buf);
+}
+
+static int mouse_x, mouse_y;
+
+static void mouse_cb(unsigned char buttons, char dx, char dy, unsigned char wheel)
+{
+	mouse_x += dx;
+	mouse_y += dy;
+	if(mouse_x < 0)
+		mouse_x = 0;
+	else if(mouse_x >= vga_hres)
+		mouse_x = vga_hres-1;
+	if(mouse_y < 0)
+		mouse_y = 0;
+	else if(mouse_y >= vga_vres)
+		mouse_y = vga_vres-1;
+	vga_frontbuffer[vga_hres*mouse_y+mouse_x] = 0xffff;
+}
+
+static void keyboard_cb(unsigned char modifiers, unsigned char key)
+{
+	if(modifiers != 0x00)
+		printf("%x (mod:%x)\n", key, modifiers);
+	else
+		printf("%x\n", key);
+}
+
+static void input()
+{
+	mouse_x = 0;
+	mouse_y = 0;
+	usb_set_mouse_cb(mouse_cb);
+	usb_set_keyboard_cb(keyboard_cb);
+	while(!uart_read_nonblock());
+	usb_set_mouse_cb(NULL);
+	usb_set_keyboard_cb(NULL);
+}
+
+#define MEMTEST_LEN (32*1024*1024)
+extern void* _memtest_buffer;
+static void memtest(char *nb)
+{
+	char *c;
+	unsigned int n;
+
+	if(*nb == 0) {
+		printf("memtest <nbursts>\n");
+		return;
+	}
+	n = strtoul(nb, &c, 0);
+	if(*c != 0) {
+		printf("incorrect count\n");
+		return;
+	}
+
+	printf("Filling buffer...\n");
+	CSR_MEMTEST_ADDRESS = (unsigned int)_memtest_buffer;
+	CSR_MEMTEST_ERRORS = 0;
+	CSR_MEMTEST_WRITE = 1;
+	CSR_MEMTEST_BCOUNT = n; //MEMTEST_LEN/32;
+	while(CSR_MEMTEST_BCOUNT > 0);
+	printf("Reading buffer...\n");
+	CSR_MEMTEST_ADDRESS = (unsigned int)_memtest_buffer;
+	CSR_MEMTEST_ERRORS = 0;
+	CSR_MEMTEST_WRITE = 0;
+	CSR_MEMTEST_BCOUNT = n;
+	while(CSR_MEMTEST_BCOUNT > 0);
+	printf("Errors: %d\n", CSR_MEMTEST_ERRORS);
+}
+
+/* beyond this number, the address LFSR loops */
+#define LMEMTEST_BCOUNT 209715LL
+#define LMEMTEST_RUNS 200LL
+static void lmemtest()
+{
+	int i;
+	unsigned int total_errors;
+	struct timestamp t0, t1, t;
+	unsigned int length;
+
+	total_errors = 0;
+
+	flush_bridge_cache();
+	while(!readchar_nonblock()) {
+		time_get(&t0);
+		for(i=0;i<LMEMTEST_RUNS;i++) {
+			CSR_MEMTEST_ADDRESS = (unsigned int)_memtest_buffer;
+			CSR_MEMTEST_ERRORS = 0;
+			CSR_MEMTEST_WRITE = 1;
+			CSR_MEMTEST_BCOUNT = LMEMTEST_BCOUNT;
+			while(CSR_MEMTEST_BCOUNT > 0);
+			CSR_MEMTEST_ADDRESS = (unsigned int)_memtest_buffer;
+			CSR_MEMTEST_ERRORS = 0;
+			CSR_MEMTEST_WRITE = 0;
+			CSR_MEMTEST_BCOUNT = LMEMTEST_BCOUNT;
+			while(CSR_MEMTEST_BCOUNT > 0);
+			total_errors += CSR_MEMTEST_ERRORS;
+		}
+		time_get(&t1);
+		time_diff(&t, &t1, &t0);
+		length = 2LL*LMEMTEST_BCOUNT*32LL*LMEMTEST_RUNS/(1024LL*1024LL);
+		if(t.sec != 0)
+			printf("%d MB in %d s (%d MB/s), cumulative errors: %d\n", length, t.sec, length/t.sec, total_errors);
+	}
+}
+
 static char *get_token(char **str)
 {
 	char *c, *d;
@@ -678,18 +956,31 @@ static void do_command(char *c)
 		param2 = get_token(&c);
 		param3 = get_token(&c);
 
-		if(strcmp(command, "mr") == 0) mr(param1, param2);
+		if(strcmp(command, "cons") == 0) vga_set_console(!vga_get_console());
+		else if(strcmp(command, "mr") == 0) mr(param1, param2);
 		else if(strcmp(command, "mw") == 0) mw(param1, param2, param3);
-		else if(strcmp(command, "ls") == 0) ls();
+		else if(strcmp(command, "ls") == 0) ls(param1);
 		else if(strcmp(command, "flush") == 0) flush_bridge_cache();
-		else if(strcmp(command, "render") == 0) render(param1);
-		else if(strcmp(command, "irender") == 0) {
+		else if(strcmp(command, "edid") == 0) edid();
+		else if(strcmp(command, "new") == 0) new();
+		else if(strcmp(command, "add") == 0) add(param1);
+		else if(strcmp(command, "a") == 0) add(param1);
+		else if(strcmp(command, "del") == 0) del(param1);
+		else if(strcmp(command, "d") == 0) del(param1);
+		else if(strcmp(command, "print") == 0) print();
+		else if(strcmp(command, "p") == 0) print();
+		else if(strcmp(command, "renderb") == 0) renderb();
+		else if(strcmp(command, "r") == 0) renderb();
+		else if(strcmp(command, "renderf") == 0) renderf(param1);
+		else if(strcmp(command, "renderi") == 0) {
 			renderer_istart();
 			irender = 1;
-		} else if(strcmp(command, "stop") == 0) ui_render_stop();
-		else if(strcmp(command, "spam") == 0) spam();
+		} else if(strcmp(command, "stop") == 0) renderer_stop();
+		else if(strcmp(command, "vmode") == 0) vmode(param1);
 		else if(strcmp(command, "stats") == 0) stats();
+		else if(strcmp(command, "version") == 0) puts(VERSION);
 		else if(strcmp(command, "reboot") == 0) reboot();
+		else if(strcmp(command, "reconf") == 0) reconf();
 		else if(strcmp(command, "help") == 0) help();
 
 		/* Test functions and hacks */
@@ -698,9 +989,20 @@ static void do_command(char *c)
 		else if(strcmp(command, "checker") == 0) checker();
 		else if(strcmp(command, "pfputest") == 0) pfputest();
 		else if(strcmp(command, "tmutest") == 0) tmutest();
-		else if(strcmp(command, "tmudemo") == 0) tmudemo();
 		else if(strcmp(command, "tmubench") == 0) tmubench();
 		else if(strcmp(command, "echo") == 0) echo();
+		else if(strcmp(command, "cr") == 0) cr(param1);
+		else if(strcmp(command, "cw") == 0) cw(param1, param2);
+		else if(strcmp(command, "testv") == 0) testv();
+		else if(strcmp(command, "readv") == 0) readv(param1);
+		else if(strcmp(command, "writev") == 0) writev(param1, param2);
+		else if(strcmp(command, "irtest") == 0) irtest();
+		else if(strcmp(command, "midirx") == 0) midirx();
+		else if(strcmp(command, "miditx") == 0) miditx(param1);
+		else if(strcmp(command, "readblock") == 0) readblock(param1);
+		else if(strcmp(command, "input") == 0) input();
+		else if(strcmp(command, "memtest") == 0) memtest(param1);
+		else if(strcmp(command, "lmemtest") == 0) lmemtest();
 
 		else if(strcmp(command, "") != 0) printf("Command not found: '%s'\n", command);
 	}
@@ -726,6 +1028,8 @@ void shell_init()
 
 void shell_input(char c)
 {
+	char xc[2];
+
 	cpustats_enter();
 	switch(c) {
 		case 0x7f:
@@ -734,6 +1038,11 @@ void shell_input(char c)
 				command_index--;
 				putsnonl("\x08 \x08");
 			}
+			break;
+		case '\e':
+			vga_set_console(!vga_get_console());
+			break;
+		case 0x07:
 			break;
 		case '\r':
 		case '\n':
@@ -745,7 +1054,9 @@ void shell_input(char c)
 			break;
 		default:
 			if(command_index < (sizeof(command_buffer)-1)) {
-				writechar(c);
+				xc[0] = c;
+				xc[1] = 0;
+				putsnonl(xc);
 				command_buffer[command_index] = c;
 				command_index++;
 			}

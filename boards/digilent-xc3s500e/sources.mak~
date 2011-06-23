@@ -73,6 +73,9 @@ INTERFACE16_SRC=$(wildcard $(CORES_DIR)/16_bit_interface/rtl/*.v)
 #========= system monitor
 MONITOR_SRC=$(wildcard $(CORES_DIR)/monitor/rtl/*.v)
 
+#========= vga controller
+VGA_CNT_SRC=$(wildcard $(CORES_DIR)/vga_controller/rtl/*.v)
+
 
 #========= Todos los cores que se definen
-CORES_SRC=$(CONBUS_SRC) $(LM32_SRC) $(CSRBRG_SRC) $(NORFLASH_SRC) $(BRAM_SRC) $(UART_SRC) $(ASFIFO_SRC) $(SYSCTL_SRC) $(HPDMC_SRC)  $(VGAFB_SRC) $(LCD_SRC) $(DDR_SRC) $(ETHERNET_SRC) $(FMLARB_SRC) $(FMLBRG_SRC) $(INTERFACE16_SRC) $(MONITOR_SRC)
+CORES_SRC=$(CONBUS_SRC) $(LM32_SRC) $(CSRBRG_SRC) $(NORFLASH_SRC) $(BRAM_SRC) $(UART_SRC) $(ASFIFO_SRC) $(SYSCTL_SRC) $(HPDMC_SRC) $(VGA_CNT_SRC) $(VGAFB_SRC) $(LCD_SRC) $(DDR_SRC) $(ETHERNET_SRC) $(FMLARB_SRC) $(FMLBRG_SRC) $(INTERFACE16_SRC) $(MONITOR_SRC)

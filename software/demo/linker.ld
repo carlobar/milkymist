@@ -4,9 +4,7 @@ ENTRY(_start)
 __DYNAMIC = 0;
 
 MEMORY {
-	flash : ORIGIN = 0x00000000, LENGTH = 0x800000   /* 8M */
-	sram  : ORIGIN = 0x20000000, LENGTH = 0x1000     /* 4k */
-	sdram : ORIGIN = 0x40000000, LENGTH = 0x4000000  /* 64M */
+	sdram : ORIGIN = 0x40000000, LENGTH = 0x8000000  /* 128M */
 }
 
 SECTIONS
@@ -37,6 +35,14 @@ SECTIONS
 		*(.sdata .sdata.* .gnu.linkonce.s.*)
 		_edata = .;
 	} > sdram
+	
+	.memtestbuf :
+	{
+		. = ALIGN(32*1024*1024);
+		_memtest_buffer = . ;
+		. += 32*1024*1024;
+		*(.memtestbuf .memtestbuf.*)
+	} > sdram
 
 	.bss :
 	{
@@ -48,6 +54,7 @@ SECTIONS
 		*(.dynbss)
 		*(.bss .bss.* .gnu.linkonce.b.*)
 		*(COMMON)
+		. = ALIGN(4);
 		_ebss = .;
 		_end = .;
 	} > sdram

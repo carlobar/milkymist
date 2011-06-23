@@ -4,7 +4,7 @@ OUTPUT_ARCH(avr:2)
 MEMORY
 {
   text   (rx)   : ORIGIN = 0, LENGTH = 8K
-  data   (rw!x) : ORIGIN = 0, LENGTH = 32K
+  data   (rw!x) : ORIGIN = 0x10000, LENGTH = 32K
 }
 SECTIONS
 {

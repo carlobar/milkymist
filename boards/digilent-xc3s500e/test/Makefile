@@ -28,6 +28,7 @@ VINCDIR= 				\
 	-I$(CORES_DIR)/lm32/rtl		\
 	-I$(CORES_DIR)/norflash16/rtl	\
 	-I$(CORES_DIR)/sysctl/rtl	\
+	-I$(CORES_DIR)/minimac2/rtl	\
 	-I$(CORES_DIR)/uart/rtl		\
 	-I$(CORES_DIR)/wb_uart/rtl		\
 	-I$(CORES_DIR)/wb_ddr/rtl		\
@@ -50,6 +51,7 @@ SIM_SRC=						\
 	$(wildcard $(CORES_DIR)/lcd_2x16/rtl/*.v)	\
 	$(wildcard $(CORES_DIR)/monitor/rtl/*.v)	\
 	$(wildcard $(CORES_DIR)/norflash16/rtl/*.v)	\
+	$(wildcard $(CORES_DIR)/minimac2/rtl/*.v)	\
 	$(wildcard $(CORES_DIR)/uart/rtl/*.v)		\
 	$(wildcard $(CORES_DIR)/wb_uart/rtl/*.v)		\
 	$(wildcard $(CORES_DIR)/wb_ddr/rtl/*.v)		\

@@ -1,5 +1,5 @@
 /*
- * libHPDMC - SDRAM initialization runtime for Milkymist bootloaders
+ * libHPDMC - SDRAM initialization runtime for Milkymist SoC bootloaders
  * Copyright (C) 2010 Sebastien Bourdeauducq
  *
  * This library is free software; you can redistribute it and/or
@@ -27,7 +27,6 @@
 #include "libhpdmc.h"
 #include "libhpdmc_timing.h"
 
-
 /* evaluate feature dependencies */
 #if defined(FEAT_MANUAL_CALIBRATION) && defined(FEAT_NO_OUTPUT)
 #  error "Can't use FEAT_MANUAL_CALIBRATION with FEAT_NO_OUTPUT"
@@ -39,8 +38,7 @@
 
 /*
  * GLOBAL VARIABLES
- * r25: Input delay
- * r24: DQS phase
+ * r24: DQS delay
  * r23: return address
  */
 
@@ -61,64 +59,72 @@
 .endm
 
 .section .text, "ax", @progbits
-.global _sdram_init 
-.global print 
-.global printint
+.global _sdram_init
 _sdram_init:
-
 	mv	r23, ra
-/*	PRINT(banner)
+/*
+
+	PRINT(banner)
 	PRINT(version)
 	PRINT(nl)
 	PRINT(nl)
 */
-	/*Set mode bypass*/
-	mvhi	r2, hi(CSR_HPDMC_SYSTEM)
-	ori	r2, r2, lo(CSR_HPDMC_SYSTEM)
-	mvu	r3, (HPDMC_SYSTEM_BYPASS)
-	sw 	(r2+0), r3	
-
-	/* wait for the PLLs to lock */
-	mvhi	r1, hi(CSR_HPDMC_IODELAY)
-	ori	r1, r1, lo(CSR_HPDMC_IODELAY)
-	mvu	r3, (HPDMC_PLL1_LOCKED|HPDMC_PLL2_LOCKED)
-wait_pll:
-	lw	r2, (r1+0)
-	and	r2, r2, r3
-	bne	r2, r3, wait_pll
-	
-
-
-	/* set IDEHPDMC_DQSDELAY_RDYLAY=0, wait for DQS generator ready */
-
-	mvhi	r2, hi(HPDMC_IDELAY_RST)
-	ori	r2, r2, lo(HPDMC_IDELAY_RST)
-//	mvu	r2, (HPDMC_IDELAY_RST)
-	sw	(r1+0), r2
-wait_dqs_start:
-	lw	r2, (r1+0)
-	andi	r2, r2, (HPDMC_DQSDELAY_RDY)
-	be	r2, r0, wait_dqs_start
-	xor	r25, r25, r25
-	xor	r24, r24, r24
 
 	/* send init sequence */
 	bi send_init
 send_init_return:
-	//PRINT(seqcomplete)
 
+//	PRINT(seqcomplete)
+/*
+	// calibrate and set IDELAY=0 
+	mvhi	r1, hi(CSR_HPDMC_IODELAY)
+	ori	r1, r1, lo(CSR_HPDMC_IODELAY)
+	mvu	r2, (HPDMC_IDELAY_CAL)
+	sw	(r1+0), r2
+	// the IODELAYs require some signal edges during calibration... 
+	 // make dummy memory transfers to keep them happy.
+	 //
+	mvu	r3, 500
+	mvhi	r4, hi(0xffffffff)
+	ori	r4, r4, lo(0xffffffff)
+dummyxfer:
+	mvhi	r1, hi(0xc8000000) // L2 writeback/invalidate 
+	sw	(r1+0), r0
+	mvhi	r1, hi(0xc0000000) // L2 fetch/make dirty 
+	sw	(r1+0), r0
+	mvhi	r1, hi(0xc8000000) // L2 writeback/invalidate 
+	sw	(r1+0), r0
+	mvhi	r1, hi(0xc0000000) // L2 fetch/make dirty 
+	sw	(r1+0), r4
+	addi	r3, r3, -1
+	bne	r3, r0, dummyxfer
+	// now reset IODELAYs 
+	mvhi	r1, hi(CSR_HPDMC_IODELAY)
+	ori	r1, r1, lo(CSR_HPDMC_IODELAY)
+	mvu	r2, (HPDMC_IDELAY_RST)
+	sw	(r1+0), r2
+	mvu	r1, 200
+	calli	delay
+	mvhi	r1, hi(CSR_HPDMC_IODELAY)
+	ori	r1, r1, lo(CSR_HPDMC_IODELAY)
+	sw	(r1+0), r2
+	mvu	r1, 200
+	calli	delay
+
+	xor	r24, r24, r24
+*/
 #ifdef FEAT_PBC_MANUAL_CALIBRATION
-	/* if PBC is pushed, go into debug/manual mode */
+	/* if BTN3 is pushed, go into debug/manual mode */
 	mvhi	r1, hi(CSR_GPIO_IN)
 	ori	r1, r1, lo(CSR_GPIO_IN)
 	lw	r2, (r1+0)
-	andi	r2, r2, (GPIO_PBC)
+	andi	r2, r2, (GPIO_BTN3)
 	bne	r2, r0, mancal
 #endif
 
 	bi	autocalibrate
 autocalibrate_fail_return:
-	//PRINT(autocalfail)
+	PRINT(autocalfail)
 #ifdef FEAT_MANUAL_CALIBRATION
 	bi	mancal /* does not return */
 #endif
@@ -128,21 +134,21 @@ autocalibrate_fail_return:
 	bi	autocalibrate_fail_return
 
 autocalibrate_success_return:
-	//PRINT(autocalok)
+//	PRINT(autocalok)
 	
 	/* small memory test */
-	mv	r1, r0
+	mvi	r1, 0
 	xor	r2, r2, r2
 	calli	memtest
 	be	r1, r0, memtest_fail
-	PRINT(continueboot)
+//	PRINT(continueboot)
 	
 	RETURN(LIBHPDMC_SUCCESS)
 
 memtest_fail:
 	PRINT(testfailmsg)
 #ifdef FEAT_MANUAL_CALIBRATION
-	bi	config//mancal /* does not return *///
+	bi	config//mancal /* does not return */ //
 #endif
 #ifdef FEAT_RETURN_STATUS
 	RETURN(LIBHPDMC_MEMTEST_FAILED)
@@ -274,35 +280,24 @@ send_init:
 
 	bi	send_init_return
 
-/*
- * TODO: proper dynamic autocalibration:
- * scan IDELAY/DQS and memtest,
- * then place in the middle of the working zone.
- */
 /* clobbers: r1, r2, r3, r4 */
 autocalibrate:
-	mvu	r24, 000 /* DQS phase, change this number for your board */
 	mvhi	r1, hi(CSR_HPDMC_IODELAY)
 	ori	r1, r1, lo(CSR_HPDMC_IODELAY)
+	mvu	r24, 000 /* input delay, change this number for your board */
 	xor	r2, r2, r2
-	mvu	r3, (HPDMC_DQSDELAY_CE|HPDMC_DQSDELAY_INC)
-	be	r2, r24, dqs_loop_end
-dqs_loop:
+	mvu	r3, (HPDMC_IDELAY_CE|HPDMC_IDELAY_INC)
+	be	r2, r24, idelay_loop_end
+idelay_loop:
 	sw	(r1+0), r3
-dqs_loop_wait:
-	lw	r4, (r1+0)
-	andi	r4, r4, (HPDMC_DQSDELAY_RDY)
-	be	r4, r0, dqs_loop_wait
 	addi	r2, r2, 1
-	bne	r2, r24, dqs_loop
-dqs_loop_end:
+	bne	r2, r24, idelay_loop
+idelay_loop_end:
 	bi	autocalibrate_success_return
 
 #ifdef FEAT_MANUAL_CALIBRATION
 /* does not return */
 mancal:
-
-
 	/* enable VGA out */
 	mvhi	r1, hi(CSR_VGA_BASEADDRESS)
 	ori	r1, r1, lo(CSR_VGA_BASEADDRESS)
@@ -312,13 +307,7 @@ mancal:
 	ori	r1, r1, lo(CSR_VGA_RESET)
 	sw 	(r1+0), r0
 mancal_loop:
-////////////////////////
-//////////////////////////////////////
-////////////////////////////////////
 	PRINT(manualkeys)
-	mv	r1, r25
-	calli	printint
-	PRINT(spacer)
 	mv	r1, r24
 	calli	printint
 	PRINT(nl)
@@ -327,56 +316,32 @@ mancal_loop:
 	be	r1, r2, inc_input_delay
 	mvu	r2, 'd'
 	be	r1, r2, dec_input_delay
-	mvu	r2, 'U'
-	be	r1, r2, inc_dqs_phase
-	mvu	r2, 'D'
-	be	r1, r2, dec_dqs_phase
-	mvu	r2, 't'//10
+	mvu	r2, 't'
 	be	r1, r2, small_test
 	mvu	r2, 'T'
 	be	r1, r2, big_test
+	mvu	r2, 'c'
+	be	r1, r2, iodelay_calibrate
+	mvu	r2, 'r'
+	be	r1, r2, iodelay_reset
 	mvu	r2, 'p'
 	be	r1, r2, disp_pattern
 	mvu	r2, 'b'
 	be	r1, r2, boot
 	bi mancal_loop
 inc_input_delay:
-	mvu	r1, 1
-	be	r25, r1, mancal_loop
-	addi	r25, r25, 001
+	addi	r24, r24, 1
 	mvhi	r1, hi(CSR_HPDMC_IODELAY)
 	ori	r1, r1, lo(CSR_HPDMC_IODELAY)
 	mvu	r2, (HPDMC_IDELAY_CE|HPDMC_IDELAY_INC)
 	sw	(r1+0), r2
 	bi	mancal_loop
 dec_input_delay:
-	be	r25, r0, mancal_loop
-	addi	r25, r25, -1
+	addi	r24, r24, -1
 	mvhi	r1, hi(CSR_HPDMC_IODELAY)
 	ori	r1, r1, lo(CSR_HPDMC_IODELAY)
 	mvu	r2, (HPDMC_IDELAY_CE)
 	sw	(r1+0), r2
-	bi	mancal_loop
-inc_dqs_phase:
-	mvu	r1, 255
-	be	r24, r1, mancal_loop
-	addi	r24, r24, 1
-	mvhi	r1, hi(CSR_HPDMC_IODELAY)
-	ori	r1, r1, lo(CSR_HPDMC_IODELAY)
-	mvu	r2, (HPDMC_DQSDELAY_CE|HPDMC_DQSDELAY_INC)
-	sw	(r1+0), r2
-	bi	wait_dqs
-dec_dqs_phase:
-	be	r24, r0, mancal_loop
-	addi	r24, r24, -1
-	mvhi	r1, hi(CSR_HPDMC_IODELAY)
-	ori	r1, r1, lo(CSR_HPDMC_IODELAY)
-	mvu	r2, (HPDMC_DQSDELAY_CE)
-	sw	(r1+0), r2
-wait_dqs:
-	lw	r2, (r1+0)
-	andi	r2, r2, HPDMC_DQSDELAY_RDY
-	be	r2, r0, wait_dqs
 	bi	mancal_loop
 small_test:
 	xor	r1, r1, r1
@@ -389,10 +354,25 @@ big_test:
 	calli memtest
 after_test:
 	be	r1, r0, print_test_fail
-	PRINT(memtestpassed)
+//	PRINT(memtestpassed)
 	bi	mancal_loop
 print_test_fail:
 	PRINT(memtestfailed)
+	bi	mancal_loop
+iodelay_calibrate:
+/*
+	mvhi	r1, hi(CSR_HPDMC_IODELAY)
+	ori	r1, r1, lo(CSR_HPDMC_IODELAY)
+	mvu	r2, (HPDMC_IDELAY_CAL)
+	sw	(r1+0), r2
+*/
+	bi	mancal_loop
+iodelay_reset:
+	mvhi	r1, hi(CSR_HPDMC_IODELAY)
+	ori	r1, r1, lo(CSR_HPDMC_IODELAY)
+	mvu	r2, (HPDMC_IDELAY_RST)
+	sw	(r1+0), r2
+	xor	r25, r25, r25
 	bi	mancal_loop
 disp_pattern:
 	mvu	r1, 640
@@ -421,8 +401,10 @@ boot:
 	mvhi	r1, hi(CSR_VGA_RESET)
 	ori	r1, r1, lo(CSR_VGA_RESET)
 	mvi	r2, VGA_RESET
-	//sw 	(r1+0), r2
+	sw 	(r1+0), r2
 	RETURN(LIBHPDMC_SUCCESS)
+
+
 
 //////////////////////////////////////////////////////////////////////////
 // recursive configuration
@@ -445,7 +427,7 @@ config:
 	mvhi	r13, hi(0x00000001)		
 	ori	r13, r13, lo(0x00000001)
 
-
+/*
 	mvhi r19, hi(0x41000000)
 	ori  r19, r19, lo(0x41000000)
 	mvhi r18, hi(0x53334558)
@@ -455,12 +437,12 @@ config:
 	sw   (r19+0), r11
 	lw   r18,(r19+4)
 	lw   r17,(r19+0)
-
-/*	mvhi r19, hi(0x80001004)
-	ori  r19, r19, lo(0x80001004)
+*/
+/*	mvhi r19, hi(0xe0001004)
+	ori  r19, r19, lo(0xe0001004)
 	sw   (r19+0), r18
-	mvhi r19, hi(0x80004004)
-	ori  r19, r19, lo(0x80004004)
+	mvhi r19, hi(0xe0004004)
+	ori  r19, r19, lo(0xe0004004)
 	sw   (r19+0), r17
 */
 
@@ -491,11 +473,11 @@ recursive_conf:
 
 
 /*
-	mvhi r19, hi(0x80001004)
-	ori  r19, r19, lo(0x80001004)
+	mvhi r19, hi(0xe0001004)
+	ori  r19, r19, lo(0xe0001004)
 	sw   (r19+0), r4
-	mvhi r19, hi(0x80004004)
-	ori  r19, r19, lo(0x80004004)
+	mvhi r19, hi(0xe0004004)
+	ori  r19, r19, lo(0xe0004004)
 	sw   (r19+0), r6
 
 */
@@ -557,13 +539,18 @@ end:
 
 print_success:
 	PRINT(memtestpassed)
-	//bi	boot
+	bi	boot
 
 loop_end:
 	nop
 	nop
 	nop
 	bi loop_end
+
+
+
+
+
 
 
 /* getkey - gets a character from the console
@@ -593,155 +580,25 @@ getkey:
 memtest:
 
 
-	mvhi r19, hi(0x40000000)
-	ori  r19, r19, lo(0x40000000)
-
-	mvhi r4, hi(0xcafebabe)
-	ori  r4, r4, lo(0xcafebabe)
-	mvhi r5, hi(0x00000000)
-	ori  r5, r5, lo(0x00000000)
-	mvhi r6, hi(0x12345678)
-	ori  r6, r6, lo(0x12345678)
-	mvhi r7, hi(0xfacecafe)
-	ori  r7, r7, lo(0xfacecafe)
-	mvhi r8, hi(0x22222222)
-	ori  r8, r8, lo(0x22222222)
-	sw   (r19+0), r4		// almacenar dato en memoria
-	sw   (r19+1), r5		// almacenar dato en memoria
-	sw   (r19+2), r6		// almacenar dato en memoria
-	sw   (r19+3), r7		// almacenar dato en memoria
-	sw   (r19+4), r8		// almacenar dato en memoria
-
-	lw   r4, (r19+0)		// leer dato	
-	lw   r5, (r19+1)		// leer dato	
-	lw   r6, (r19+2)		// leer dato	
-	lw   r7, (r19+3)		// leer dato	
-	lw   r8, (r19+4)		// leer dato	
-
-
-	/*write and read memory*/
-	// visualizar dato en lcd
-
-	
-	// segunda escritura
-	mvhi r19, hi(0x40000020)
-	ori  r19, r19, lo(0x40000020)
-
-	mvhi r4, hi(0xcafebabe)
-	ori  r4, r4, lo(0xcafebabe)
-	sw   (r19+0), r4		// almacenar dato en memoria
-
-	mvhi r19, hi(0x80005004)
-	ori  r19, r19, lo(0x80005004)
-	sw   (r19+0), r4		//visualizar dato en lcd
-
-
-
-	// primera escritura
-	mvhi r19, hi(0x40000000)
-	ori  r19, r19, lo(0x40000000)
-
-	mvhi r4, hi(0xabadface)
-	ori  r4, r4, lo(0xabadface)
-	sw   (r19+0), r4		// almacenar dato en memoria
-
-	mvhi r19, hi(0x80001004)
-	ori  r19, r19, lo(0x80001004)
+	mvhi r4, hi(0xaaaaaaaa)
+	ori  r4, r4, lo(0xaaaaaaaa)
+	mvhi r19, hi(0xe0001004)
+	ori  r19, r19, lo(0xe0001004)
 	sw   (r19+0), r4	
 
 
 
-		// tercera escritura
-	mvhi r19, hi(0x40000010)
-	ori  r19, r19, lo(0x40000010)
-
-	mvhi r4, hi(0x12345678)
-	ori  r4, r4, lo(0x12345678)
-	sw   (r19+0), r4		// almacenar dato en memoria
-
-
-
-	// enviar orden inicio de lectura
-	mvhi r4, hi(0xefecadab)	// commando 
-	ori  r4, r4, lo(0xefecadab)
-	mvhi r19, hi(0x80004004)	// almacenar insruccion en data_out_b
-	ori  r19, r19, lo(0x80004004)
-	sw   (r19+0), r4
-
-
-	// primera lectura
-
-	mvhi r19, hi(0x40000000)
-	ori  r19, r19, lo(0x40000000)
-	lw   r4, (r19+0)		// leer dato	
-
-
-	mvhi r19, hi(0x80004004)	// visualizar lectura en lcd
-	ori  r19, r19, lo(0x80004004)
-	sw   (r19+0), r4
-
-
-
-	// segunda lectura
-	mvhi r19, hi(0x40000020)
-	ori  r19, r19, lo(0x40000020)
-	lw   r5, (r19+0)		// leer dato	
-
-
-
-
-	mvhi r19, hi(0x80006004)	// visualizar lectura en lcd
-	ori  r19, r19, lo(0x80006004)
-	sw   (r19+0), r5
-
-
-
-
-//	bi	memtest
-/*
-	mvhi r13, hi(0x41000000)
-	ori  r13, r13, lo(0x41000000)
-	mvhi r18, hi(0x53334558)
-	ori  r18, r18, lo(0x53334558)
-	sw   (r13+4), r18
-*/
-/*
-inc_delay_test:
-
-	mvhi	r1, hi(CSR_HPDMC_IODELAY)
-	ori	r1, r1, lo(CSR_HPDMC_IODELAY)
-	mvu	r2, (HPDMC_IDELAY_CE|HPDMC_IDELAY_INC)
-	sw	(r1+0), r2
-
-
-
-// almacenar dato en memoria
-	mvhi r19, hi(0x40001000)
-	ori  r19, r19, lo(0x40001000)
-
-	mvhi r4, hi(0xabadface)
-	ori  r4, r4, lo(0xabadface)
-	sw   (r19+0), r4		
-
-	lw   r4, (r19+0)	
-
-	bi 	inc_delay_test
-*/
-
 	/* 1. fill with pattern */
 	mvhi	r5, 0x4000	/* r5 - current address */
-	ori	r5, r5, lo(0x0000)
-	mvhi	r3, 0x0	/* r3 - remaining words */
-	ori	r3, r3, lo(0x1000)
+	mvhi	r3, 0x70	/* r3 - remaining words */
 	mv	r4, r3		/* r4 - number of words to test */
 	mv	r6, r2		/* r6 - current value of the PRNG */
 	mvhi	r7, hi(22695477)
 	ori	r7, r7, lo(22695477)
 	bne	r1, r0, patloop
 	mvhi	r3, 0x0
-	ori	r3, r3, lo(0x1000)
+	ori	r3, r3, 0x10
 	mv	r4, r3
-
 patloop:
 	sw	(r5+0), r6
 	mul	r6, r6, r7
@@ -751,7 +608,6 @@ patloop:
 	bne	r3, r0, patloop
 	/* 2. check pattern */
 	mvhi	r5, 0x4000	/* r5 - current address */
-	ori	r5, r5, lo(0x0000)
 	mv	r3, r4		/* r3 - remaining words */
 	mv	r6, r2		/* r6 - current value of the PRNG */
 chkloop:
@@ -762,249 +618,14 @@ chkloop:
 	addi	r5, r5, 4
 	addi	r3, r3, -1
 	bne	r3, r0, chkloop
-//	PRINT(memtestpassed)
 	mvu	r1, 1
 	ret
 testfail:
-
-
-// print test info
-
-					// dato leido
-	mvhi r19, hi(0x80001004)
-	ori  r19, r19, lo(0x80001004)
-	sw   (r19+0), r4
-
-					// dato almacenado
-	mvhi r19, hi(0x80004004)	
-	ori  r19, r19, lo(0x80004004)
-	sw   (r19+0), r6
-
-					// remaining words
-	mvhi r19, hi(0x80005004)
-	ori  r19, r19, lo(0x80005004)
-	sw   (r19+0), r3
-					// address
-	mvhi r19, hi(0x80006004)	// visualizar lectura en lcd
-	ori  r19, r19, lo(0x80006004)
-	sw   (r19+0), r5
-
-
-/*
-	lw   r5, (r13+4)
-	mvhi r19, hi(0x80005004)
-	ori  r19, r19, lo(0x80005004)
-	sw   (r19+0), r5
-*/
-
-// prueba de memoria
-// almacenar datos iniciales.
-/*
-	mvhi r2, hi(0x000001ff)		// cantidad de datos
-	ori  r2, r2, lo(0x000001ff)
-	mvhi r4, hi(0xabadface)		// dato que se almacena
-	ori  r4, r4, lo(0xabadface)
-	mvhi r19, hi(0x40000000)	// direccion de inicio
-	ori  r19, r19, lo(0x40000000)
-	sw   (r19+0), r4
-	sw   (r19+8), r4
-*/
-
-// direccion que se evalua
-/*
-	mvhi r18, hi(0x40000000)
-	ori  r18, r18, lo(0x40000000)
-loop_test:
-	// escribir dato
-	sw   (r18+0), r4		
-
-	// verificar datos
-	lw	r5, (r19+0)
-	bne	r5, r4, fail
-	lw	r5, (r19+8)
-	bne	r5, r4, fail
-	lw	r5, (r18+0)
-	bne	r5, r4, fail
-	addi	r18, r18, 4
-	addi	r2, r2, -1
-	bne	r2, r0, loop_test
-	calli	print_success
-
-
-fail:
-	
-*/
-
-//	calli	end
-/*
-	mvhi r19, hi(0x80001004)
-	ori  r19, r19, lo(0x80001004)
-	sw   (r19+0), r4
-	mvhi r19, hi(0x80004004)
-	ori  r19, r19, lo(0x80004004)
-	sw   (r19+0), r6
-
-	mvhi r19, hi(0x80005004)
-	ori  r19, r19, lo(0x80005004)
-	sw   (r19+0), r3
-
-
-	mvhi r19, hi(0x80006004)
-	ori  r19, r19, lo(0x80006004)
-	lw   r5, (r13+4)	
-	sw   (r19+0), r5
-*/
-//	PRINT(memtestfailed)
-
-/*
-
-	mvhi r19, hi(0x40001000)
-	ori  r19, r19, lo(0x40001000)
-
-	mvhi r4, hi(0xabadface)
-	ori  r4, r4, lo(0xabadface)
-	sw   (r19+0), r4		// almacenar dato en memoria
-*/
-
-
-
-	// primera lectura
-/*
-	mvhi r19, hi(0x40000040)
-	ori  r19, r19, lo(0x40000040)
-	lw   r4, (r19+0)		// leer dato	
-
-
-	mvhi r19, hi(0x80004004)	// visualizar lectura en lcd
-	ori  r19, r19, lo(0x80004004)
-	sw   (r19+0), r4
-
-
-
-	// segunda lectura
-	mvhi r19, hi(0x40000050)
-	ori  r19, r19, lo(0x40000050)
-	lw   r5, (r19+0)		// leer dato	
-
-
-
-
-	mvhi r19, hi(0x80006004)	// visualizar lectura en lcd
-	ori  r19, r19, lo(0x80006004)
-	sw   (r19+0), r5
-
-
-
-*/
-
-
 	xor	r1, r1, r1
 	ret
-
-/////////////////////////////////////////////////////////////////
-/////////////////////////////////////////////////////////////////
-recursive_memtest:
-/*
-	// segunda escritura
-	mvhi r19, hi(0x40002000)
-	ori  r19, r19, lo(0x40002000)
-
-	mvhi r4, hi(0xcafebabe)
-	ori  r4, r4, lo(0xcafebabe)
-	sw   (r19+0), r4		// almacenar dato en memoria
-
-	mvhi r19, hi(0x80005004)
-	ori  r19, r19, lo(0x80005004)
-	sw   (r19+0), r4		//visualizar dato en lcd
-
-
-	// segunda lectura
-	mvhi r19, hi(0x40002000)
-	ori  r19, r19, lo(0x40002000)
-	lw   r5, (r19+0)		// leer dato	
-
-	mvhi r19, hi(0x80006004)	// visualizar lectura en lcd
-	ori  r19, r19, lo(0x80006004)
-	sw   (r19+0), r5
-*/
-
-
-
-
-
-	/* 1. define parameters */
-	mvhi	r5, 0x4000	/* r5 - current address */
-	ori	r5, r5, lo(0x0000)
-	mvhi	r3, 0x0ff	/* r3 - remaining words */
-	ori	r3, r3, lo(0x0000)
-	mv	r4, r3		/* r4 - number of words to test */
-	mvhi	r7, hi(12345678)
-	ori	r7, r7, lo(12345678)	/*r7 - multiplier factor */
-
-
-store_data:
-	mv	r25, r5
-	mv 	r27, r7
-	mul	r26, r25, r27	// multiply curent address and 0x12345678
-	mv 	r6, r26
-	sw	(r5+0), r6		// store data
-	xor 	r8, r8, r8		// clear r8: verify position
-	
-verify_historial:
-
-	mv	r25, r8
-	mv 	r27, r7
-	mul	r26, r25, r27	// multiply curent address and 0x12345678
-	mv 	r20, r26
-	
-	lw   	r21, (r8+0)		// read address r8
-	bne	r21, r20, verify_error
-
-	be	r8, r5, store_new_data	// verify finished
-	bgeu	r8, r5, verify_error
-	addi	r8, r8, 4	
-	bi	verify_historial
-
-
-store_new_data:
-	addi 	r5, r5, 4
-	addi	r3, r3, -1
-	be	r0, r3, finish
-	bi	store_data
-
-finish:
-	//PRINT(memtestpassed)
-	mvu	r1, 1
-	ret
-
-
-verify_error:
-						// remaining words
-	mvhi r19, hi(0x80001004)
-	ori  r19, r19, lo(0x80001004)
-	sw   (r19+0), r3
-					// address
-	mvhi r19, hi(0x80004004)	// visualizar lectura en lcd
-	ori  r19, r19, lo(0x80004004)
-	sw   (r19+0), r5
-
-	xor	r1, r1, r1
-	ret
-
-
-
-
-calc_data: 
-	mul	r26, r25, r27	// multiply curent address and 0x12345678
-	ret
-
-
-
-
-
 
 #ifndef FEAT_NO_OUTPUT
-/* printint - prints an integer 0-999
+/* printint - prints an integer between -999 and 999
  *
  * inputs:	r1 - input
  * outputs:	none
@@ -1013,7 +634,20 @@ calc_data:
 printint:
 	mvhi	r2, hi(CSR_UART_RXTX)
 	ori	r2, r2, lo(CSR_UART_RXTX)
+
+	bge	r1, r0, positive
+	xnor	r1, r0, r1
+	addi	r1, r1, 1
 	
+	mvu	r3, '-'
+	sw	(r2+0), r3
+writeintwait0:
+	rcsr	r3, IP
+	andi	r3, r3, IRQ_UARTTX
+	be	r3, r0, writeintwait0
+	wcsr	IP, r3
+
+positive:
 	mvu	r4, 100
 	divu	r3, r1, r4
 	modu	r1, r1, r4
@@ -1090,11 +724,10 @@ autocalfail: .string "Autocalibration failed, entering manual mode.\n"
 autocalok: .string "Autocalibration OK, testing memory...\n"
 continueboot: .string "All SDRAM initialization completed, boot continuing.\n\n"
 testfailmsg: .string "Memory test failed, entering manual mode.\n"
-manualkeys: .string "\nu: inc. input delay // d: dec. input delay\nU: inc. DQS phase   // D: dec. DQS phase\nt: test (small)     // T: test (large)\np: display pattern\nb: boot\n"
+manualkeys: .string "\nu: inc. DQ delay  // d: dec. DQ delay\nt: test (small)   // T: test (large)\nc: calibrate IODELAY2s\nr: reset IODELAY2s\np: display pattern\nb: boot\n"
 memtestfailed: .string "Memory test failed.\n"
 memtestpassed: .string "Memory test passed.\n"
 spacer: .string " -- "
 nl: .string "\n"
 #endif /* FEAT_NO_OUTPUT */
-
 

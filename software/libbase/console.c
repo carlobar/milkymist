@@ -19,53 +19,77 @@
 #include <console.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <irq.h>
+#include <hw/interrupts.h>
+
+static console_write_hook write_hook;
+static console_read_hook read_hook;
+static console_read_nonblock_hook read_nonblock_hook;
+
+void console_set_write_hook(console_write_hook h)
+{
+	write_hook = h;
+}
+
+void console_set_read_hook(console_read_hook r, console_read_nonblock_hook rn)
+{
+	read_hook = r;
+	read_nonblock_hook = rn;
+}
+
+static void writechar(char c)
+{
+	uart_write(c);
+	if(write_hook != NULL)
+		write_hook(c);
+}
+
+char readchar()
+{
+	while(1) {
+		if(uart_read_nonblock())
+			return uart_read();
+		if((read_nonblock_hook != NULL) && read_nonblock_hook())
+			return read_hook();
+	}
+}
+
+int readchar_nonblock()
+{
+	return (uart_read_nonblock()
+		|| ((read_nonblock_hook != NULL) && read_nonblock_hook()));
+}
 
 int puts(const char *s)
 {
+	unsigned int oldmask;
+
+	oldmask = irq_getmask();
+	irq_setmask(IRQ_UARTRX); // HACK: prevent UART data loss
+
 	while(*s) {
 		writechar(*s);
 		s++;
 	}
 	writechar('\n');
+	
+	irq_setmask(oldmask);
 	return 1;
 }
 
 void putsnonl(const char *s)
 {
+	unsigned int oldmask;
+
+	oldmask = irq_getmask();
+	irq_setmask(IRQ_UARTRX); // HACK: prevent UART data loss
+	
 	while(*s) {
 		writechar(*s);
 		s++;
 	}
-}
-
-void readstr(char *s, int size)
-{
-	char c;
-	int ptr;
 	
-	ptr = 0;
-	while(1) {
-		c = readchar();
-		switch(c) {
-			case 0x7f:
-			case 0x08:
-				if(ptr > 0) {
-					ptr--;
-					putsnonl("\x08 \x08");
-				}
-				break;
-			case '\r':
-			case '\n':
-				s[ptr] = 0x00;
-				putsnonl("\n");
-				return;
-			default:
-				writechar(c);
-				s[ptr] = c;
-				ptr++;
-				break;
-		}
-	}
+	irq_setmask(oldmask);
 }
 
 int printf(const char *fmt, ...)

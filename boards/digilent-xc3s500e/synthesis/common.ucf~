@@ -76,22 +76,22 @@ PIN "clkgen_sys.CLK0" CLOCK_DEDICATED_ROUTE = FALSE;
 
 #####################################################
 
-NET "ddram/hpdmc/ddrio/sdram_dq_out[0]" MAXDELAY = 100ps;
-NET "ddram/hpdmc/ddrio/sdram_dq_out[1]" MAXDELAY = 100ps;
-NET "ddram/hpdmc/ddrio/sdram_dq_out[2]" MAXDELAY = 100ps;
-NET "ddram/hpdmc/ddrio/sdram_dq_out[3]" MAXDELAY = 100ps;
-NET "ddram/hpdmc/ddrio/sdram_dq_out[4]" MAXDELAY = 100ps;
-NET "ddram/hpdmc/ddrio/sdram_dq_out[5]" MAXDELAY = 100ps;
-NET "ddram/hpdmc/ddrio/sdram_dq_out[6]" MAXDELAY = 100ps;
-NET "ddram/hpdmc/ddrio/sdram_dq_out[7]" MAXDELAY = 100ps;
-NET "ddram/hpdmc/ddrio/sdram_dq_out[8]" MAXDELAY = 100ps;
-NET "ddram/hpdmc/ddrio/sdram_dq_out[9]" MAXDELAY = 100ps;
-NET "ddram/hpdmc/ddrio/sdram_dq_out[10]" MAXDELAY = 100ps;
-NET "ddram/hpdmc/ddrio/sdram_dq_out[11]" MAXDELAY = 100ps;
-NET "ddram/hpdmc/ddrio/sdram_dq_out[12]" MAXDELAY = 100ps;
-NET "ddram/hpdmc/ddrio/sdram_dq_out[13]" MAXDELAY = 100ps;
-NET "ddram/hpdmc/ddrio/sdram_dq_out[14]" MAXDELAY = 100ps;
-NET "ddram/hpdmc/ddrio/sdram_dq_out[15]" MAXDELAY = 100ps;
+#NET "ddram/hpdmc/ddrio/sdram_dq_out[0]" MAXDELAY = 100ps;
+#NET "ddram/hpdmc/ddrio/sdram_dq_out[1]" MAXDELAY = 100ps;
+#NET "ddram/hpdmc/ddrio/sdram_dq_out[2]" MAXDELAY = 100ps;
+#NET "ddram/hpdmc/ddrio/sdram_dq_out[3]" MAXDELAY = 100ps;
+#NET "ddram/hpdmc/ddrio/sdram_dq_out[4]" MAXDELAY = 100ps;
+#NET "ddram/hpdmc/ddrio/sdram_dq_out[5]" MAXDELAY = 100ps;
+#NET "ddram/hpdmc/ddrio/sdram_dq_out[6]" MAXDELAY = 100ps;
+#NET "ddram/hpdmc/ddrio/sdram_dq_out[7]" MAXDELAY = 100ps;
+#NET "ddram/hpdmc/ddrio/sdram_dq_out[8]" MAXDELAY = 100ps;
+#NET "ddram/hpdmc/ddrio/sdram_dq_out[9]" MAXDELAY = 100ps;
+#NET "ddram/hpdmc/ddrio/sdram_dq_out[10]" MAXDELAY = 100ps;
+#NET "ddram/hpdmc/ddrio/sdram_dq_out[11]" MAXDELAY = 100ps;
+#NET "ddram/hpdmc/ddrio/sdram_dq_out[12]" MAXDELAY = 100ps;
+#NET "ddram/hpdmc/ddrio/sdram_dq_out[13]" MAXDELAY = 100ps;
+#NET "ddram/hpdmc/ddrio/sdram_dq_out[14]" MAXDELAY = 100ps;
+#NET "ddram/hpdmc/ddrio/sdram_dq_out[15]" MAXDELAY = 100ps;
 
 
 #NET "ddram/hpdmc/ddrio/sdram_dqs_out_delayed(*)" KEEP;
@@ -174,18 +174,18 @@ NET "sdram_adr(11)" 	LOC = "N5" ;
 NET "sdram_adr(12)"	LOC = "P2" ;
 
 ##--- bank address inputs
-NET "sdram_ba(0)" 	LOC = "K5" ;
-NET "sdram_ba(1)"		LOC = "K6" ;
+NET "sdram_ba(0)" 	LOC = "K5"  | IOSTANDARD = LVCMOS33;
+NET "sdram_ba(1)"	LOC = "K6"  | IOSTANDARD = LVCMOS33;
 
 #--- differential clock input
-NET "sdram_clk_n"	LOC = "J4" ;
-NET "sdram_clk_p"	LOC = "J5" ;
+NET "sdram_clk_n"	LOC = "J4"  | IOSTANDARD = LVCMOS33;
+NET "sdram_clk_p"	LOC = "J5"  | IOSTANDARD = LVCMOS33;
 
 #--- active-high clock enable input
-NET "sdram_cke"		LOC = "K3" ;
+NET "sdram_cke"		LOC = "K3"  | IOSTANDARD = LVCMOS33;
 
 #--- active-low chip select input
-NET "sdram_cs_n"		LOC = "K4" ;#
+NET "sdram_cs_n"	LOC = "K4"  | IOSTANDARD = LVCMOS33;
 
 # ----- data inputs
 NET "sdram_dq(0)"		LOC = "L2" ;
@@ -206,9 +206,9 @@ NET "sdram_dq(14)"	LOC = "H6" ;
 NET "sdram_dq(15)"	LOC = "H5" ;
 
 #--- command inputs
-NET "sdram_ras_n"    	LOC = "C1" ;
-NET "sdram_cas_n"		LOC = "C2" ;
-NET "sdram_we_n"     	LOC = "D1" ;
+NET "sdram_ras_n"    	LOC = "C1"  | IOSTANDARD = LVCMOS33;
+NET "sdram_cas_n"	LOC = "C2"  | IOSTANDARD = LVCMOS33;
+NET "sdram_we_n"     	LOC = "D1"  | IOSTANDARD = LVCMOS33;
 
 #---- data mask
 NET "sdram_dqm(0)"    	LOC = "J2" ;
@@ -219,57 +219,57 @@ NET "sdram_dqs(0)"   	LOC = "L6" ;
 NET "sdram_dqs(1)"   	LOC = "G3" ;
 
 #---- clock feedback into top DCM
-Net sys_clk_fb LOC=B9;
+#Net sys_clk_fb LOC=B9;
 
-NET "sdram_adr(*)" 	IOSTANDARD = SSTL2_I;
-NET "sdram_ba(*)" 	IOSTANDARD = SSTL2_I;
+NET "sdram_adr(*)" 	IOSTANDARD = LVCMOS33;
+NET "sdram_ba(*)" 	IOSTANDARD = LVCMOS33;
 
-NET "sdram_dqs(*)" 	IOSTANDARD = SSTL2_I | SLEW = FAST;
-NET "sdram_dqm(*)" 	IOSTANDARD = SSTL2_I;
-NET "sdram_dq(*)" 	IOSTANDARD = SSTL2_I | SLEW = FAST;
+NET "sdram_dqs(*)" 	IOSTANDARD = LVCMOS33 | SLEW = FAST;
+NET "sdram_dqm(*)" 	IOSTANDARD = LVCMOS33;
+NET "sdram_dq(*)" 	IOSTANDARD = LVCMOS33 | SLEW = FAST;
 
-NET "sys_clk_fb" CLOCK_DEDICATED_ROUTE = FALSE;
-NET "sys_clk_fb" MAXDELAY = 1660 ps;
+#NET "sys_clk_fb" CLOCK_DEDICATED_ROUTE = FALSE;
+#NET "sys_clk_fb" MAXDELAY = 1660 ps;
 
 
 #============== ethernet ==============
 #--- transmit clock.
-#Net phy_tx_clk LOC=T7 | IOSTANDARD = LVCMOS33;
+Net phy_tx_clk LOC=T7 | IOSTANDARD = LVCMOS33;
 
 #--- receive clock
-#Net phy_rx_clk LOC=V3 | IOSTANDARD = LVCMOS33;
+Net phy_rx_clk LOC=V3 | IOSTANDARD = LVCMOS33;
 
 #--- carrier sense
-#Net phy_crs LOC=U13 | IOSTANDARD = LVCMOS33;
+Net phy_crs LOC=U13 | IOSTANDARD = LVCMOS33;
 
 #--- receive data valid
-#Net phy_dv LOC=V2 | IOSTANDARD = LVCMOS33;
+Net phy_dv LOC=V2 | IOSTANDARD = LVCMOS33;
 
 #--- receive data from PHY
-#Net phy_rx_data(0) LOC=V8 | IOSTANDARD = LVCMOS33;
-#Net phy_rx_data(1) LOC=T11 | IOSTANDARD = LVCMOS33;
-#Net phy_rx_data(2) LOC=U11 | IOSTANDARD = LVCMOS33;
-#Net phy_rx_data(3) LOC=V14 | IOSTANDARD = LVCMOS33;
+Net phy_rx_data(0) LOC=V8 | IOSTANDARD = LVCMOS33;
+Net phy_rx_data(1) LOC=T11 | IOSTANDARD = LVCMOS33;
+Net phy_rx_data(2) LOC=U11 | IOSTANDARD = LVCMOS33;
+Net phy_rx_data(3) LOC=V14 | IOSTANDARD = LVCMOS33;
 #Net errxd(4) LOC=U14 | IOSTANDARD = LVCMOS33;
 
-#Net phy_tx_en LOC=P15 | IOSTANDARD = LVCMOS33;
+Net phy_tx_en LOC=P15 | IOSTANDARD = LVCMOS33;
 
 #--- MII collision detect
-#Net phy_col LOC=U6 | IOSTANDARD = LVCMOS33;
+Net phy_col LOC=U6 | IOSTANDARD = LVCMOS33;
 
 
 #--- Transmit data to the PHY.
-#Net phy_tx_data(0) LOC=R11 | IOSTANDARD = LVCMOS33;
-#Net phy_tx_data(1) LOC=T15 | IOSTANDARD = LVCMOS33;
-#Net phy_tx_data(2) LOC=R5 | IOSTANDARD = LVCMOS33;
-#Net phy_tx_data(3) LOC=T5 | IOSTANDARD = LVCMOS33;
+Net phy_tx_data(0) LOC=R11 | IOSTANDARD = LVCMOS33;
+Net phy_tx_data(1) LOC=T15 | IOSTANDARD = LVCMOS33;
+Net phy_tx_data(2) LOC=R5 | IOSTANDARD = LVCMOS33;
+Net phy_tx_data(3) LOC=T5 | IOSTANDARD = LVCMOS33;
 #Net etxd(4) LOC=R6 | IOSTANDARD = LVCMOS33;
 
 #--- managemet clock
-#Net phy_mii_clk LOC=P9 | IOSTANDARD = LVCMOS33;
+Net phy_mii_clk LOC=P9 | IOSTANDARD = LVCMOS33;
 
 #--- management data
-#Net phy_mii_data LOC=U5 | IOSTANDARD = LVCMOS33;
+Net phy_mii_data LOC=U5 | IOSTANDARD = LVCMOS33;
 
 
 

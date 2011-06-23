@@ -20,7 +20,7 @@
 
 void serialboot();
 void netboot();
-void cardboot(int alt);
-
+void fsboot(int devnr);
+void flashboot();
 
 #endif /* __BOOT_H */

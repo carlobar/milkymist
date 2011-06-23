@@ -17,8 +17,11 @@
 
 #include <stdio.h>
 #include <irq.h>
+#include <system.h>
 #include <hw/ac97.h>
 #include <hw/interrupts.h>
+#include <hw/sysctl.h>
+#include <hw/capabilities.h>
 
 #include <hal/snd.h>
 
@@ -40,6 +43,11 @@ void snd_init()
 	unsigned int codec_id;
 	unsigned int mask;
 	
+	if(!(CSR_CAPABILITIES & CAP_AC97)) {
+		printf("SND: not supported by SoC, giving up.\n");
+		return;
+	}
+	
 	snd_cr_request = 0;
 	snd_cr_reply = 0;
 
@@ -56,16 +64,21 @@ void snd_init()
 	codec_id = snd_ac97_read(0x00);
 	if(codec_id == 0x0d50)
 		printf("SND: found LM4550 AC'97 codec\n");
+	else if(codec_id == 0x6150)
+		printf("SND: found WM9707 AC'97 codec\n");
 	else
 		printf("SND: warning, unknown codec found (ID:%04x)\n", codec_id);
 	
 	/* Unmute and set volumes */
 	/* TODO: API for this */
-	snd_ac97_write(0x02, 0x0000);
-	snd_ac97_write(0x04, 0x0f0f);
-	snd_ac97_write(0x18, 0x0000);
-	snd_ac97_write(0x0e, 0x0000);
-	snd_ac97_write(0x1c, 0x0f0f);
+	snd_ac97_write(0x02, 0x0000); /* master volume */
+	snd_ac97_write(0x04, 0x0f0f); /* headphones volume */
+	snd_ac97_write(0x18, 0x0000); /* PCM out volume */
+	snd_ac97_write(0x1c, 0x0f0f); /* record gain */
+
+	snd_ac97_write(0x0e, 0x0000); /* mic volume: max */
+	snd_ac97_write(0x10, 0x0000); /* line in volume: max */
+	snd_ac97_write(0x1a, 0x0505); /* record select: stero mix */
 
 	snd_play_empty();
 	snd_record_empty();
@@ -158,7 +171,7 @@ int snd_play_refill(short *buffer)
 	unsigned int oldmask;
 
 	oldmask = irq_getmask();
-	irq_setmask(oldmask & (~IRQ_AC97DMAR));
+	irq_setmask(0);
 	
 	if(play_level >= PLAY_BUFQ_SIZE) {
 		irq_setmask(oldmask);
@@ -204,7 +217,7 @@ void snd_play_stop()
 	unsigned int oldmask;
 
 	oldmask = irq_getmask();
-	irq_setmask(oldmask & (~IRQ_AC97DMAR));
+	irq_setmask(0);
 	CSR_AC97_DCTL = 0;
 	play_underrun = 0;
 	irq_ack(IRQ_AC97DMAR);
@@ -243,10 +256,7 @@ static void record_start(short *buffer)
 
 void snd_isr_dmaw()
 {
-	asm volatile( /* Invalidate Level-1 data cache */
-		"wcsr DCC, r0\n"
-		"nop\n"
-	);
+	flush_cpu_dcache();
 
 	if(record_level == 0) {
 		printf("SND: stray DMAW irq\n");
@@ -280,7 +290,7 @@ int snd_record_refill(short *buffer)
 	unsigned int oldmask;
 
 	oldmask = irq_getmask();
-	irq_setmask(oldmask & (~IRQ_AC97DMAW));
+	irq_setmask(0);
 
 	if(record_level >= RECORD_BUFQ_SIZE) {
 		irq_setmask(oldmask);
@@ -324,7 +334,7 @@ void snd_record_stop()
 	unsigned int oldmask;
 
 	oldmask = irq_getmask();
-	irq_setmask(oldmask & (~IRQ_AC97DMAW));
+	irq_setmask(0);
 	CSR_AC97_UCTL = 0;
 	record_overrun = 0;
 	irq_ack(IRQ_AC97DMAW);

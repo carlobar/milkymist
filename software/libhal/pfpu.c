@@ -17,6 +17,7 @@
 
 #include <stdio.h>
 #include <irq.h>
+#include <system.h>
 #include <hw/interrupts.h>
 #include <hw/pfpu.h>
 
@@ -47,7 +48,7 @@ void pfpu_init()
 	mask = irq_getmask();
 	mask |= IRQ_PFPU;
 	irq_setmask(mask);
-	
+
 	printf("FPU: programmable floating point unit initialized\n");
 }
 
@@ -58,6 +59,7 @@ static void load_program(pfpu_instruction *program, int size)
 	volatile pfpu_instruction *pfpu_prog = (pfpu_instruction *)CSR_PFPU_CODEBASE;
 
 	for(page=0;page<(PFPU_PROGSIZE/PFPU_PAGESIZE);page++) {
+		CSR_PFPU_CODEPAGE = page;
 		for(word=0;word<PFPU_PAGESIZE;word++) {
 			if(size == 0) return;
 			pfpu_prog[word] = *program;
@@ -100,12 +102,8 @@ void pfpu_isr()
 {
 	if(queue[consume]->update)
 		update_registers(queue[consume]->registers);
-	if(queue[consume]->invalidate) {
-		asm volatile( /* Invalidate Level-1 data cache */
-			"wcsr DCC, r0\n"
-			"nop\n"
-		);
-	}
+	if(queue[consume]->invalidate)
+		flush_cpu_dcache();
 	queue[consume]->callback(queue[consume]);
 	consume = (consume + 1) & PFPU_TASKQ_MASK;
 	level--;
@@ -123,7 +121,7 @@ int pfpu_submit_task(struct pfpu_td *td)
 	unsigned int oldmask;
 
 	oldmask = irq_getmask();
-	irq_setmask(oldmask & (~IRQ_PFPU));
+	irq_setmask(0);
 
 	if(level >= PFPU_TASKQ_SIZE) {
 		irq_setmask(oldmask);

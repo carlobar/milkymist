@@ -36,9 +36,13 @@
 //
 // Common configuration options
 //
-
+/*
 `define CFG_EBA_RESET 32'h0
 `define CFG_DEBA_RESET 32'h0
+*/
+
+`define CFG_EBA_RESET 32'h00860000
+`define CFG_DEBA_RESET 32'h10000000
 
 `define CFG_PL_MULTIPLY_ENABLED
 `define CFG_PL_BARREL_SHIFT_ENABLED
@@ -52,7 +56,12 @@
 `define CFG_ICACHE_BASE_ADDRESS    32'h0
 `define CFG_ICACHE_LIMIT           32'h7fffffff
 
-//`define CFG_DCACHE_ENABLED
+
+`ifndef SIMULATION_DDR
+//	`define CFG_DCACHE_ENABLED
+`else
+`endif
+
 `define CFG_DCACHE_ASSOCIATIVITY   2
 `define CFG_DCACHE_SETS            512
 `define CFG_DCACHE_BYTES_PER_LINE  16

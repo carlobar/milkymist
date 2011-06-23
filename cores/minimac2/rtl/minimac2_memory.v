@@ -48,6 +48,32 @@ wire [31:0] wb_dat_i_le = {wb_dat_i[7:0], wb_dat_i[15:8], wb_dat_i[23:16], wb_da
 wire [3:0] wb_sel_i_le = {wb_sel_i[0], wb_sel_i[1], wb_sel_i[2], wb_sel_i[3]};
 
 wire [31:0] rxb0_wbdat;
+
+RAMB16_S9_S36 rxb0 (
+	.DIB(wb_dat_i_le),
+	.DIPB(4'd0),
+	.DOB(rxb0_wbdat),
+	.ADDRB({wb_adr_i[10:2], 5'd0}),
+	.WEB({4{wb_en & wb_we_i & (wb_buf == 2'b00)}} & wb_sel_i_le),
+	.ENB(1'b1),
+	.SSRB(1'b0),
+	.CLKB(sys_clk),
+
+	.DIA(rxb0_dat),
+	.DIPA(1'd0),
+	.DOA(),
+	.ADDRA({rxb0_adr, 3'd0}),
+	.WEA({4{rxb0_we}}),
+	.ENA(1'b1),
+	.SSRA(1'b0),
+	.CLKA(phy_rx_clk)
+);
+
+ defparam rxb0.WRITE_MODE_A = "WRITE_FIRST";
+ defparam rxb1.WRITE_MODE_B = "WRITE_FIRST";
+
+
+/*
 RAMB16BWER #(
 	.DATA_WIDTH_A(36),
 	.DATA_WIDTH_B(9),
@@ -56,8 +82,8 @@ RAMB16BWER #(
 	.EN_RSTRAM_A("FALSE"),
 	.EN_RSTRAM_B("FALSE"),
 	.SIM_DEVICE("SPARTAN6"),
-	.WRITE_MODE_A("WRITE_FIRST"),
-	.WRITE_MODE_B("WRITE_FIRST")
+	.WRITE_MODE_A(""WRITE_FIRST""),
+	.WRITE_MODE_B(""WRITE_FIRST"")
 ) rxb0 (
 	.DIA(wb_dat_i_le),
 	.DIPA(4'd0),
@@ -77,8 +103,34 @@ RAMB16BWER #(
 	.RSTB(1'b0),
 	.CLKB(phy_rx_clk)
 );
+*/
+
 
 wire [31:0] rxb1_wbdat;
+RAMB16_S9_S36 rxb1(
+	.DIB(wb_dat_i_le),
+	.DIPB(4'd0),
+	.DOB(rxb1_wbdat),
+	.ADDRB({wb_adr_i[10:2], 5'd0}),
+	.WEB({4{wb_en & wb_we_i & (wb_buf == 2'b01)}} & wb_sel_i_le),
+	.ENB(1'b1),
+	.SSRB(1'b0),
+	.CLKB(sys_clk),
+
+	.DIA(rxb1_dat),
+	.DIPA(1'd0),
+	.DOA(),
+	.ADDRA({rxb1_adr, 3'd0}),
+	.WEA({4{rxb1_we}}),
+	.ENA(1'b1),
+	.SSRA(1'b0),
+	.CLKA(phy_rx_clk)
+
+);
+
+ defparam rxb1.WRITE_MODE_A = "WRITE_FIRST";
+ defparam rxb1.WRITE_MODE_B = "WRITE_FIRST";
+/*
 RAMB16BWER #(
 	.DATA_WIDTH_A(36),
 	.DATA_WIDTH_B(9),
@@ -87,8 +139,8 @@ RAMB16BWER #(
 	.EN_RSTRAM_A("FALSE"),
 	.EN_RSTRAM_B("FALSE"),
 	.SIM_DEVICE("SPARTAN6"),
-	.WRITE_MODE_A("WRITE_FIRST"),
-	.WRITE_MODE_B("WRITE_FIRST")
+	.WRITE_MODE_A(""WRITE_FIRST""),
+	.WRITE_MODE_B(""WRITE_FIRST"")
 ) rxb1 (
 	.DIA(wb_dat_i_le),
 	.DIPA(4'd0),
@@ -108,8 +160,36 @@ RAMB16BWER #(
 	.RSTB(1'b0),
 	.CLKB(phy_rx_clk)
 );
+*/
+
 
 wire [31:0] txb_wbdat;
+
+RAMB16_S9_S36 txb(
+	.DIB(wb_dat_i_le),
+	.DIPB(4'd0),
+	.DOB(txb_wbdat),
+	.ADDRB({wb_adr_i[10:2], 5'd0}),
+	.WEB({4{wb_en & wb_we_i & (wb_buf == 2'b10)}} & wb_sel_i_le),
+	.ENB(1'b1),
+	.SSRB(1'b0),
+	.CLKB(sys_clk),
+
+	.DIA(8'd0),
+	.DIPA(1'd0),
+	.DOA(txb_dat),
+	.ADDRA({txb_adr, 3'd0}),
+	.WEA(4'd0),
+	.ENA(1'b1),
+	.SSRA(1'b0),
+	.CLKA(phy_tx_clk)
+
+);
+
+ defparam txb.WRITE_MODE_A = "WRITE_FIRST";
+ defparam txb.WRITE_MODE_B = "WRITE_FIRST";
+
+/*
 RAMB16BWER #(
 	.DATA_WIDTH_A(36),
 	.DATA_WIDTH_B(9),
@@ -118,8 +198,8 @@ RAMB16BWER #(
 	.EN_RSTRAM_A("FALSE"),
 	.EN_RSTRAM_B("FALSE"),
 	.SIM_DEVICE("SPARTAN6"),
-	.WRITE_MODE_A("WRITE_FIRST"),
-	.WRITE_MODE_B("WRITE_FIRST")
+	.WRITE_MODE_A(""WRITE_FIRST""),
+	.WRITE_MODE_B(""WRITE_FIRST"")
 ) txb (
 	.DIA(wb_dat_i_le),
 	.DIPA(4'd0),
@@ -139,6 +219,7 @@ RAMB16BWER #(
 	.RSTB(1'b0),
 	.CLKB(phy_tx_clk)
 );
+*/
 
 always @(posedge sys_clk) begin
 	if(sys_rst)

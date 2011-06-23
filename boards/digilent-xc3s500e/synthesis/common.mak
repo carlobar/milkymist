@@ -9,7 +9,7 @@ load: build/system.bit
 	cd build && impact -batch ../load.cmd
 
 build/system.ncd: build/system.ngd
-	cd build && map -ignore_keep_hierarchy -logic_opt on -cm speed -timing -ol high -xe n system.ngd
+	cd build && map -ignore_keep_hierarchy  -cm area -timing -ol high -xe n system.ngd
 
 build/system-routed.ncd: build/system.ncd
 	cd build && par -ol high -xe n -w system.ncd system-routed.ncd
@@ -27,3 +27,7 @@ clean:
 	rm -rf build/*
 
 .PHONY: prom timing usage load clean
+
+
+
+## map -logic_opt on  -cm speed 

@@ -20,12 +20,11 @@
 #include <uart.h>
 
 #include <hal/time.h>
-#include <hal/slowout.h>
 #include <hal/snd.h>
 #include <hal/pfpu.h>
 #include <hal/tmu.h>
+#include <hal/usb.h>
 
-#include "ui.h"
 #include "cpustats.h"
 
 void isr()
@@ -37,14 +36,12 @@ void isr()
 	irqs = irq_pending() & irq_getmask();
 
 	if(irqs & IRQ_UARTRX)
-		uart_async_isr_rx();
+		uart_isr_rx();
 	if(irqs & IRQ_UARTTX)
-		uart_async_isr_tx();
+		uart_isr_tx();
 
 	if(irqs & IRQ_TIMER0)
 		time_isr();
-	if(irqs & IRQ_TIMER1)
-		slowout_isr();
 
 	if(irqs & IRQ_AC97CRREQUEST)
 		snd_isr_crrequest();
@@ -60,11 +57,9 @@ void isr()
 
 	if(irqs & IRQ_TMU)
 		tmu_isr();
-
-	if(irqs & IRQ_GPIO) {
-		irq_ack(IRQ_GPIO);
-		ui_isr_key();
-	}
+	
+	if(irqs & IRQ_USB)
+		usb_isr();
 
 	cpustats_leave();
 }
