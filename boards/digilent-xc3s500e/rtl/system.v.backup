@@ -1,0 +1,1747 @@
+/*
+ * Milkymist VJ SoC
+ * Copyright (C) 2007, 2008, 2009, 2010 Sebastien Bourdeauducq
+ *k
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, version 3 of the License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+
+// incluir ddr, ps2, vga
+
+`include "setup.v"
+`include "lm32_include.v"
+`include "system_conf.v"
+//`include "lm32_include.v"
+//`include "setup_monitor.v"
+
+module system(
+	input clk_in,
+	input resetin,
+	
+	// Boot ROM
+
+	output [23:0] flash_adr,
+//	`ifndef SIMULATION
+//		`ifndef SIMULATION_DDR
+//			input [15:0] flash_d,
+//		`else
+			inout [15:0] flash_d,
+//		`endif
+//	`else
+//		input [15:0] flash_d,
+//	`endif
+
+
+	output flash_oe_n,
+	output flash_we_n,
+	output flash_ce_n,
+	output flash_byte_n,
+
+	// LCD
+	output e,
+	output rs,
+	output rw,
+//	inout [3:0] data_io,
+
+
+
+	// DDR SDRAM
+
+	output sdram_clk_p,
+	output sdram_clk_n,
+	output sdram_cke,
+	output sdram_cs_n,
+	output sdram_we_n,
+	output sdram_cas_n,
+	output sdram_ras_n,
+	output [1:0] sdram_dqm,
+	output [12:0] sdram_adr,
+	output [1:0] sdram_ba,
+	inout [15:0] sdram_dq,
+	inout [1:0] sdram_dqs,
+	input	sys_clk_fb,
+
+
+
+	// Ethernet
+/*
+	//output phy_rst_n,
+	input phy_tx_clk,
+	input phy_rx_clk,
+	input phy_crs,
+	input phy_dv,
+	input [3:0] phy_rx_data,
+	output phy_tx_en,
+	input phy_col,
+	output [3:0] phy_tx_data,
+	output phy_mii_clk,
+	inout phy_mii_data,
+
+*/
+	//output phy_tx_er,
+//	input phy_rx_er,
+//	input phy_irq_n,
+//	output reg phy_clk,
+
+
+// switches
+	input [3:0]	sw,
+
+	input [1:0]	rot,
+
+	// VGA
+
+	output vga_hsync,
+	output vga_vsync,
+	output [2:0] rgb,
+
+
+
+	// UART
+	input uart_rx,
+	output uart_tx,
+
+	// monitor UART
+	//input uart_rx_mon,
+	//output uart_tx_mon,
+
+	// GPIO
+	input [2:0] btn,    // 3
+	output [7:0] led    //        2 (2 LEDs for UART activity)
+);
+
+
+wire clkin;
+
+`ifndef SIMULATION_DDR
+IBUFG clkin_BUFG (
+      .O(clkin), // Clock buffer output
+      .I(clk_in)  // Clock buffer input (connect directly to
+             // top-level port)
+   );
+//defparam IBUFG_inst.IOSTANDARD = "LVCMOS25";
+`else
+	assign clkin = clk_in;
+`endif
+
+
+//------------------------------------------------------------------
+// Clock and Reset Generation
+//------------------------------------------------------------------
+wire flash_reset_n;
+wire sys_clk;
+wire sys_clk_50Mhz;
+wire clk_50Mhz;
+wire sys_clk_100Mhz;
+wire clk_100Mhz;
+wire sys_clk_n;
+wire hard_reset;
+wire reset_button;// = resetin;
+wire ddr_reset;
+
+
+/*
+reg rst_main;
+
+
+
+
+reg reset_a, reset_b, reset_c;
+reg [2:0] rst_delay;
+initial rst_delay = 3'b111; 
+initial rst_main = 1'b0;
+always @(posedge clkin) begin
+	if (resetin) begin
+		rst_delay <= 3'b111;
+		rst_main <= 1'b0;
+	end else if (rst_delay == 3'd0) begin
+		rst_delay <= rst_delay;
+		rst_main <= 1'b0;
+	end else if (rst_delay < 3'b100) begin 
+		rst_delay <= rst_delay-3'd1;
+		rst_main <= 1'b1;
+	end else begin
+		rst_delay <= rst_delay-3'd1;
+		rst_main <= 1'b0;
+	end
+	reset_a <= resetin;
+	reset_b <= reset_a;
+	reset_c <= reset_b;
+
+end
+*/
+assign reset_button = resetin;
+
+//wire ram_clk, ram_clk_n;
+//assign sdram_clk_p = ram_clk;
+//assign sdram_clk_n = ram_clk_n;
+
+// instanciar el modulo DCM_SP
+`ifndef SIMULATION
+DCM_SP #(
+	.CLKDV_DIVIDE(`CLKDV_DIVIDE), // 1.5,2.0,2.5,3.0,3.5,4.0,4.5,5.0,5.5,6.0,6.5
+
+	.CLKFX_DIVIDE(`CLKFX_DIVIDE), // 1 to 32
+	.CLKFX_MULTIPLY(`CLKFX_MULTIPLY), // 2 to 32
+
+	.CLKIN_DIVIDE_BY_2("FALSE"),
+	.CLKIN_PERIOD(20),
+	.CLKOUT_PHASE_SHIFT("NONE"),
+	.CLK_FEEDBACK("1X"),
+	.DESKEW_ADJUST("SOURCE_SYNCHRONOUS"),
+	.DFS_FREQUENCY_MODE("LOW"),
+	.DLL_FREQUENCY_MODE("LOW"),
+	.DUTY_CYCLE_CORRECTION("TRUE"),
+//	.FACTORY_JF(16'hF0F0),
+	.PHASE_SHIFT(0),
+	.STARTUP_WAIT("TRUE")
+) clkgen_sys (
+	.CLK0(clk_50Mhz),//sys_clk_50Mhz
+	.CLK90(),
+	.CLK180(),
+	.CLK270(),
+
+	.CLK2X(),//ram_clk//sys_clk_100Mhz
+	.CLK2X180(),//ram_clk_n
+
+	.CLKDV(),
+	.CLKFX(sys_clk_dcm),
+	.CLKFX180(sys_clk_n_dcm),
+	.LOCKED(),
+	.CLKFB(clk_50Mhz),//sys_clk_fb//
+	.CLKIN(clkin),
+	.RST(1'b0)//1'b0/////rst_main
+);
+
+BUFG b_sys_clk(
+	.I(sys_clk_dcm),
+	.O(sys_clk)
+);
+
+BUFG b_sys_clk_n(
+	.I(sys_clk_n_dcm),
+	.O(sys_clk_n)
+);
+
+
+/*
+BUFG b_sys_clk_50Mhz(
+	.I(sys_clk_50Mhz),
+	.O(clk_50Mhz)
+);
+
+BUFG b_sys_clk_100Mhz(
+	.I(sys_clk_100Mhz),
+	.O(clk_100Mhz)
+);
+*/
+
+//assign clk_50Mhz = clkin;
+
+
+`else
+assign sys_clk = clkin;
+assign sys_clk = ~clkin;
+`endif
+
+
+
+
+
+
+
+
+
+
+`ifndef SIMULATION
+/* Synchronize the reset input */
+//reg rst0;
+reg rst1;
+//always @(posedge sys_clk) rst0 <= resetin;
+always @(posedge sys_clk) rst1 <= reset_button | hard_reset;
+//wire dcm_rst = rst1;
+/* Debounce it
+ * and generate power-on reset.
+ */
+//Mantiene sys_rst en 1 por la duracion de rst_debouncce:
+
+reg [19:0] rst_debounce;
+reg sys_rst;
+initial rst_debounce <= 20'h00014;
+initial sys_rst <= 1'b1;
+always @(posedge sys_clk) begin
+	if(rst1 | hard_reset)
+		rst_debounce <= 20'h00014;
+	else if(rst_debounce != 20'd0)
+		rst_debounce <= rst_debounce - 20'd1;
+	sys_rst <= rst_debounce != 20'd0;
+end
+
+
+//assign phy_rst_n = ~sys_rst;
+
+/*
+ * We must release the Flash reset before the system reset
+ * because the Flash needs some time to come out of reset
+ * and the CPU begins fetching instructions from it
+ * as soon as the system reset is released.
+ * From datasheet, minimum reset pulse width is 100ns
+ * and reset-to-read time is 150ns.
+ */
+/*
+// se libera flash_reset_n despes de 128 ciclos del reloj
+reg [7:0] flash_rstcounter;
+initial flash_rstcounter <= 8'd0;
+always @(posedge sys_clk) begin
+	if(rst1)
+		flash_rstcounter <= 8'd0;
+	else if(~flash_rstcounter[7])
+		flash_rstcounter <= flash_rstcounter + 8'd1;
+end
+
+assign flash_reset_n = flash_rstcounter[7];
+*/
+
+/*
+reg [7:0] dcm_rstcounter;
+initial dcm_rstcounter <= 8'd0;
+always @(posedge sys_clk) begin
+	if(rst1)
+		dcm_rstcounter <= 8'd0;
+	else if(~(dcm_rstcounter[5] & dcm_rstcounter[3]))
+		dcm_rstcounter <= dcm_rstcounter + 8'd1;
+	else
+		dcm_rstcounter <= dcm_rstcounter;
+end
+
+
+assign dcm_rst = dcm_rstcounter[5] & dcm_rstcounter[3];
+*/
+`else
+wire sys_rst;
+assign sys_rst = resetin;
+`endif
+
+
+
+
+
+
+
+
+
+
+//assign led[7] = sys_rst;
+
+
+
+
+
+
+
+
+wire [13:0] gpio_outputs;
+wire [31:0] data_out, data_out_b, data_out_c, data_out_d;
+
+
+
+wire [`SDRAM_DEPTH-1:0] fml_adr_ddr;
+wire fml_stb_ddr;
+wire fml_we_ddr;
+wire fml_ack_ddr;
+wire [3:0] fml_sel_ddr;
+wire [31:0] fml_dw_ddr;
+wire [31:0] fml_dr_ddr;
+
+//-------------------------------------------------------
+// output wire
+//*******************************************************
+
+wire [31:0]	ddr_dq;
+wire [1:0]	ddr_dqm, ddr_dqs;
+
+//assign sdram_dq = ddr_dq[15:0];
+//assign sdram_dqs = ddr_dqs[1:0];
+//assign sdram_dqm = ddr_dqm[1:0];
+
+//------------------------------------------------------------------
+// Wishbone master wires
+//------------------------------------------------------------------
+wire [31:0]	cpuibus_adr,
+		cpudbus_adr,
+		brg_adr;
+
+wire [2:0]	cpuibus_cti,
+		cpudbus_cti,
+		brg_cti;
+
+wire [31:0]	cpuibus_dat_r,
+		cpuibus_dat_w,
+		cpudbus_dat_r,
+		cpudbus_dat_w,
+		brg_dat_r,
+		brg_dat_w;
+
+wire [3:0]	cpudbus_sel,
+		cpuibus_sel,
+		brg_sel;
+
+wire		cpudbus_we,
+		cpuibus_we,
+		brg_we;
+
+wire		cpuibus_cyc,
+		cpudbus_cyc,
+		brg_cyc;
+
+wire		cpuibus_stb,
+		cpudbus_stb,
+		brg_stb;
+
+wire		cpuibus_ack,
+		cpudbus_ack,
+		brg_ack;
+
+
+wire	[31:0]	eth_rx_addr, 
+		eth_tx_addr,
+		eth_rx_data_w,
+		eth_tx_data_r;
+wire	[3:0]	eth_rx_sel,
+		eth_tx_sel;
+wire	[2:0]	eth_rx_cti,
+		eth_tx_cti;
+wire		eth_rx_cyc,
+		eth_tx_cyc;
+wire		eth_rx_stb,
+		eth_tx_stb;
+wire		eth_rx_ack,
+		eth_tx_ack;
+
+//------------------------------------------------------------------
+// Wishbone slave wires
+//------------------------------------------------------------------
+wire [31:0]	norflash_adr,
+		bram_adr,
+		csrbrg_adr;
+
+wire [2:0]	bram_cti;
+
+wire [31:0]	norflash_dat_r,
+		norflash_dat_w,
+		bram_dat_r,
+		bram_dat_w,
+		csrbrg_dat_r,
+		csrbrg_dat_w;
+
+wire [3:0]	bram_sel,
+		norflash_sel;
+
+wire		bram_we,
+		csrbrg_we,
+		aceusb_we;
+
+wire		norflash_cyc,
+		bram_cyc,
+		csrbrg_cyc;
+
+wire		norflash_stb,
+		bram_stb,
+		csrbrg_stb;
+
+wire		norflash_ack,
+		bram_ack,
+		csrbrg_ack;
+
+
+
+//------------------------------------------------------------------
+// FML master wires
+//------------------------------------------------------------------
+wire [`SDRAM_DEPTH-1:0]	fml_brg_adr,
+			fml_vga_adr,
+			fml_tmur_adr,
+			fml_tmuw_adr;
+
+wire			fml_brg_stb,
+			fml_vga_stb,
+			fml_tmur_stb,
+			fml_tmuw_stb;
+
+wire			fml_brg_we;
+
+wire			fml_brg_ack,
+			fml_vga_ack,
+			fml_tmur_ack,
+			fml_tmuw_ack;
+
+wire [3:0]		fml_brg_sel,
+			fml_tmuw_sel;
+
+wire [31:0]		fml_brg_dw,
+			fml_tmuw_dw;
+
+wire [31:0]		fml_brg_dr,
+			fml_vga_dr,
+			fml_tmur_dr;
+
+
+
+wire [`SDRAM_DEPTH-1:0] fml_adr;
+wire fml_stb;
+wire fml_we;
+wire fml_ack;
+wire [3:0] fml_sel;
+wire [31:0] fml_di;
+wire [31:0] fml_do;
+
+wire sdram_dq_t;
+wire [15:0] sdram_dq_mon;
+wire [1:0] sdram_dqs_mon;
+
+
+wire	[31:0]	data_read_flash, addr_read, instr;
+wire	[3:0]	data_io;
+wire e_ , rw_;
+wire [5:0] slave_sel;
+assign led[7:2] = slave_sel;
+
+//assign led[7:6] = {sys_rst, sys_clk};//sdram_dqs_mon;
+//assign led[7:6] = {fml_dr_ddr == 32'habadface, (fml_dr_ddr == 32'habadface) & fml_brg_stb};
+
+
+/*bufg_n_bit #(
+	.size(16)
+	)
+buf_ddr(
+	.in(sdram_dq),
+	.out(sdram_dq_mon)
+);
+*/
+//wire [15:0] sdram_dq_mon;
+//assign sdram_dq_mon = (~sdram_dq_t) ? sdram_dq : 16'bZ;
+
+
+
+/*
+wire clk_;
+DDR_reg clock_ (
+	.Q(clk_),
+	.C0(sys_clk),
+	.C1(sys_clk_n),
+	.CE(1'b1),
+	.D0(1'b1),
+	.D1(1'b0),
+	.R(1'b0),
+	.S(1'b0)
+);
+
+
+
+wire [31:0] phase_counter, counter_a, counter_b, pulses_counter;
+
+
+reg start_stop;
+
+always @(sys_clk) begin
+	if (sys_rst)
+		start_stop <= 1'b0;
+	else if (fml_brg_stb & (fml_brg_dw == 32'habadface) & fml_brg_we)
+		start_stop <= 1'b1;
+	else 
+		start_stop <= 1'b0;
+end
+
+
+
+wire start_stop;
+
+reg [2:0] delay_reg;
+
+always @(posedge sys_clk) begin
+	if (sys_rst)
+		delay_reg <= 3'b0;
+	else if (fml_brg_stb == 1'b1)
+		delay_reg <= 3'b0;
+	else if ((fml_brg_stb == 1'b0) & (delay_reg[2] == 0))
+		delay_reg <= delay_reg+3'b001;
+	else
+		delay_reg <= delay_reg;
+		
+end
+
+assign start_stop = (fml_brg_stb | ~delay_reg[2]) & ((fml_brg_dw == 32'habadface)  ^ ~sw[0] ) & (fml_brg_we ^ ~sw[0]) & (sw[0] ^ (data_out_b == 32'hefecadab));
+
+*/
+//assign led[7:6] = rot;
+//assign led[7] = start_stop;
+
+
+//########################################################
+/////////////////////////////////////////////////////
+//////////////////////////////////////////////////////
+
+
+/*
+
+wire [10:0] x;
+wire [9:0] y;
+wire [19:0] state, buf_graph;
+wire [31:0] di_a_mon, di_buf_mon;
+
+sampling  #(
+	.data_size(119),	//20
+	.state_size(20),
+	.mem_width(5)
+)sampling(
+	//.clk_fb_main(clk_50Mhz),
+	//.clk_50Mhz(clk_50Mhz),//clkin
+
+	//.sys_rst(sys_rst),
+	.sys_rst(sys_rst),//dcm_rst
+	.rst_in(rst1),
+
+	.in_dcm(sys_clk),//clkin//
+
+	.rot(rot),
+
+	.start_stop(start_stop),
+
+	// sampling signals
+	.clk(sdram_dq_t),//clk_//sys_clk//clk_
+		
+	.stb(fml_stb_ddr),////sdram_dqs_mon[0]
+//	.we(fml_we_ddr),
+	.we(sdram_dqs_mon[1]),//sdram_dq_t//
+	.dqs(sdram_dqs_mon),
+	.dq(sdram_dq_mon),
+	.do(fml_dr_ddr),
+	.di(fml_dw_ddr),////di_buf_mon
+	.dr_fml(fml_brg_dr),//di_a_mon
+	.ack(fml_ack_ddr),
+	.state(state),
+	.buf_graph(buf_graph),
+
+	.x_in(x),
+//	.y(y),
+
+	.phase_counter(phase_counter)
+	//.pulses_counter(pulses_counter),
+	//.counter_a(counter_a),
+	//.counter_b(counter_b)
+
+);
+
+
+vga_controller vga_cnt(
+	.clk(clk_50Mhz), 
+	.rst(resetin),
+	.hsync(vga_hsync),
+	.vsync(vga_vsync),
+	.x(x),
+	.y(y)
+);
+
+graph #(
+	.samples(25),
+	.data_width(20),
+	.height(10)
+) graph (
+	.clk(clk_50Mhz),//sample_clk
+	.rst(resetin),
+	.x(x),
+	.y(y),
+	.state(state),/////////////////mem_dat_r
+	.buf_data(buf_graph),
+	.rgb_out(rgb)
+);
+
+*/
+
+
+
+
+
+
+
+
+////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////
+
+//---------------------------------------------------------------------------
+// Wishbone switch
+//---------------------------------------------------------------------------
+conbus #(
+	.s_addr_w(4),
+	.s0_addr(4'b0000),	// norflash	0x00000000
+	.s1_addr(4'b0001),	// bram		0x10000000
+	.s2_addr(4'b0010),	// free		0x2000000
+	.s3_addr(4'b0011),	// Ethernet	0x30000000
+	.s4_addr(4'b0100),	// SDRAM	0x40000000
+	.s5_addr(4'b0110)	// CSR Brg	0x60000000
+
+) conbus (
+	.sys_clk(sys_clk),
+	.sys_rst(sys_rst),
+	.slave_selected(slave_sel),
+
+
+	// Master 0
+	.m0_dat_i(32'hx),
+	.m0_dat_o(cpuibus_dat_r),
+	.m0_adr_i(cpuibus_adr),
+	.m0_cti_i(cpuibus_cti),
+	.m0_we_i(1'b0),
+	.m0_sel_i(4'hf),
+	.m0_cyc_i(cpuibus_cyc),
+	.m0_stb_i(cpuibus_stb),
+	.m0_ack_o(cpuibus_ack),
+	// Master 1
+	.m1_dat_i(cpudbus_dat_w),
+	.m1_dat_o(cpudbus_dat_r),
+	.m1_adr_i(cpudbus_adr),
+	.m1_cti_i(cpudbus_cti),
+	.m1_we_i(cpudbus_we),
+	.m1_sel_i(cpudbus_sel),
+	.m1_cyc_i(cpudbus_cyc),
+	.m1_stb_i(cpudbus_stb),
+	.m1_ack_o(cpudbus_ack),
+	// Master 2
+	.m2_dat_i(eth_rx_dat_w),
+	.m2_dat_o(),
+	.m2_adr_i(eth_rx_addr),
+	.m2_cti_i(eth_rx_cti),
+	.m2_we_i(1'b1),
+	.m2_sel_i(4'hf),
+	.m2_cyc_i(eth_rx_cyc),
+	.m2_stb_i(eth_rx_stb),
+	.m2_ack_o(eth_rx_ack),
+	// Master 3
+	.m3_dat_i(32'bx),
+	.m3_dat_o(eth_tx_dat_r),
+	.m3_adr_i(eth_tx_addr),
+	.m3_cti_i(eth_tx_cti),
+	.m3_we_i(1'b1),
+	.m3_sel_i(4'b1),
+	.m3_cyc_i(eth_tx_cyc),
+	.m3_stb_i(eth_tx_stb),
+	.m3_ack_o(eth_tx_ack),
+	// Master 4
+	.m4_dat_i(32'bx),
+	.m4_dat_o(),
+	.m4_adr_i(32'bx),
+	.m4_cti_i(3'bx),
+	.m4_we_i(1'bx),
+	.m4_sel_i(4'bx),
+	.m4_cyc_i(1'b0),
+	.m4_stb_i(1'b0),
+	.m4_ack_o(),
+	// Master 5
+	.m5_dat_i(32'bx),
+	.m5_dat_o(),
+	.m5_adr_i(32'bx),
+	.m5_cti_i(3'bx),
+	.m5_we_i(1'bx),
+	.m5_sel_i(4'bx),
+	.m5_cyc_i(1'b0),
+	.m5_stb_i(1'b0),
+	.m5_ack_o(),
+
+
+	// Slave 0
+	.s0_dat_i(norflash_dat_r),
+	.s0_dat_o(norflash_dat_w),
+	.s0_adr_o(norflash_adr),
+	.s0_sel_o(norflash_sel),
+	.s0_cyc_o(norflash_cyc),
+	.s0_stb_o(norflash_stb),
+	.s0_ack_i(norflash_ack),
+	// Slave 1
+
+	.s1_dat_i(32'bx),//bram_dat_r
+	.s1_dat_o(bram_dat_w),
+	.s1_adr_o(bram_adr),
+	.s1_cti_o(bram_cti),
+	.s1_sel_o(bram_sel),
+	.s1_we_o(bram_we),
+	.s1_cyc_o(bram_cyc),
+	.s1_stb_o(bram_stb),
+	.s1_ack_i(1'b0),//bram_ack
+
+	// Slave 2
+	.s2_dat_i(32'd0),
+	.s2_dat_o(),
+	.s2_adr_o(),
+	.s2_cti_o(),
+	.s2_sel_o(),
+	.s2_we_o(),
+	.s2_cyc_o(),
+	.s2_stb_o(),
+	.s2_ack_i(1'b0),
+
+	// Slave 3
+	.s3_dat_i(32'bx),
+	.s3_dat_o(),
+	.s3_adr_o(),
+	.s3_we_o(),
+	.s3_sel_o(),
+	.s3_cyc_o(),
+	.s3_stb_o(),
+	.s3_ack_i(1'b0),
+
+	// Slave 4
+	.s4_dat_i(brg_dat_r),
+	.s4_dat_o(brg_dat_w),
+	.s4_adr_o(brg_adr),
+	.s4_cti_o(brg_cti),
+	.s4_sel_o(brg_sel),
+	.s4_we_o(brg_we),
+	.s4_cyc_o(brg_cyc),
+	.s4_stb_o(brg_stb),
+	.s4_ack_i(brg_ack),
+
+	// Slave 5
+	.s5_dat_i(csrbrg_dat_r),
+	.s5_dat_o(csrbrg_dat_w),
+	.s5_adr_o(csrbrg_adr),
+	.s5_we_o(csrbrg_we),
+	.s5_cyc_o(csrbrg_cyc),
+	.s5_stb_o(csrbrg_stb),
+	.s5_ack_i(csrbrg_ack)
+);
+
+//------------------------------------------------------------------
+// CSR bus
+//------------------------------------------------------------------
+wire [13:0]	csr_a;
+wire		csr_we;
+wire [31:0]	csr_dw;
+wire [31:0]	csr_dr_uart,
+		csr_dr_sysctl,
+		csr_dr_sysctl_b,
+		csr_dr_sysctl_c,
+		csr_dr_sysctl_d,
+		csr_dr_ethernet,
+		csr_dr_hpdmc;
+
+//---------------------------------------------------------------------------
+// WISHBONE to CSR bridge
+//---------------------------------------------------------------------------
+csrbrg csrbrg(
+	.sys_clk(sys_clk),
+	.sys_rst(sys_rst),
+	
+	.wb_adr_i(csrbrg_adr),
+	.wb_dat_i(csrbrg_dat_w),
+	.wb_dat_o(csrbrg_dat_r),
+	.wb_cyc_i(csrbrg_cyc),
+	.wb_stb_i(csrbrg_stb),
+	.wb_we_i(csrbrg_we),
+	.wb_ack_o(csrbrg_ack),
+	
+	.csr_a(csr_a),
+	.csr_we(csr_we),
+	.csr_do(csr_dw),
+	/* combine all slave->master data lines with an OR */
+	.csr_di(
+		 csr_dr_uart
+		|csr_dr_sysctl
+//		|csr_dr_ethernet
+		|csr_dr_hpdmc
+	)
+);
+
+//---------------------------------------------------------------------------
+// Interrupts
+//---------------------------------------------------------------------------
+wire gpio_irq;
+wire timer0_irq;
+wire timer1_irq;
+wire uartrx_irq;
+wire uarttx_irq;
+wire ethernetrx_irq;
+wire ethernettx_irq;
+
+wire [31:0] cpu_interrupt;
+assign cpu_interrupt = {19'd0,
+	ethernettx_irq,
+	ethernetrx_irq,
+	1'b0,
+	1'b0,
+	1'b0,
+	1'b0,
+	1'b0,
+	1'b0,
+	uarttx_irq,
+	uartrx_irq,
+	timer1_irq,
+	timer0_irq,
+	gpio_irq
+};
+
+
+
+
+//---------------------------------------------------------------------------
+// LM32 CPU
+//---------------------------------------------------------------------------
+lm32_top cpu(
+	.clk_i(sys_clk),
+	.rst_i(sys_rst),
+
+	//`ifndef SIMULATION
+	//	`ifndef SIMULATION_DDR
+			.interrupt(cpu_interrupt),
+	//	`else
+	//		.interrupt_n(cpu_interrupt),
+	//	`endif
+	//`else
+	//	.interrupt_n(cpu_interrupt),
+	//`endif
+
+
+	//
+
+	.I_ADR_O(cpuibus_adr),
+	.I_DAT_I(cpuibus_dat_r),
+	.I_DAT_O(cpuibus_dat_w),
+	.I_SEL_O(cpuibus_sel),
+	.I_CYC_O(cpuibus_cyc),
+	.I_STB_O(cpuibus_stb),
+	.I_ACK_I(cpuibus_ack),
+	.I_WE_O(cpuibus_we),
+	.I_CTI_O(cpuibus_cti),
+	.I_LOCK_O(),
+	.I_BTE_O(),
+	.I_ERR_I(1'b0),
+	.I_RTY_I(1'b0),
+
+	.D_ADR_O(cpudbus_adr),
+	.D_DAT_I(cpudbus_dat_r),
+	.D_DAT_O(cpudbus_dat_w),
+	.D_SEL_O(cpudbus_sel),
+	.D_CYC_O(cpudbus_cyc),
+	.D_STB_O(cpudbus_stb),
+	.D_ACK_I(cpudbus_ack),
+	.D_WE_O (cpudbus_we),
+	.D_CTI_O(cpudbus_cti),
+	.D_LOCK_O(),
+	.D_BTE_O(),
+	.D_ERR_I(1'b0),
+	.D_RTY_I(1'b0)
+);
+
+
+
+//---------------------------------------------------------------------------
+// Boot ROM
+//---------------------------------------------------------------------------
+
+norflash16 #(
+	.adr_width(24)
+) norflash (
+	.sys_clk(sys_clk),
+	.sys_rst(sys_rst),
+
+	.wb_adr_i(norflash_adr),
+	.wb_dat_o(norflash_dat_r),
+	.wb_dat_i(norflash_dat_w),
+	.wb_sel_i( norflash_sel), // norflash_sel
+	.wb_stb_i(norflash_stb),
+	.wb_cyc_i(norflash_cyc),
+	.wb_ack_o(norflash_ack),
+	.wb_we_i(norflash_we),
+	
+	.flash_adr(flash_adr),
+	.flash_d(flash_d),
+	.flash_oe_n(flash_oe_n),
+	.flash_we_n(flash_we_n)
+);
+
+//assign flash_byte_n = 1'b0;
+//assign flash_oe_n = 1'b0;
+//assign flash_we_n = 1'b1;
+assign flash_byte_n = norflash_stb & norflash_cyc;
+//assign	flash_byte_n = 0;
+assign flash_ce_n = 1'b0;
+
+//---------------------------------------------------------------------------
+// BRAM
+//---------------------------------------------------------------------------
+//
+// On this board, we have 16k of SRAM instead of 4k
+// so that we have space for loading some programs.
+//
+/*
+bram #(
+	.adr_width(14)
+) bram (
+	.sys_clk(sys_clk),
+	.sys_rst(sys_rst),
+
+	.wb_adr_i(bram_adr),
+	.wb_dat_o(bram_dat_r),
+	.wb_dat_i(bram_dat_w),
+	.wb_sel_i(bram_sel),
+	.wb_stb_i(bram_stb),
+	.wb_cyc_i(bram_cyc),
+	.wb_ack_o(bram_ack),
+	.wb_we_i(bram_we)
+);
+
+*/
+
+
+
+
+//---------------------------------------------------------------------------
+// FML arbiter
+//---------------------------------------------------------------------------
+/*
+fmlarb #(
+	.fml_depth(`SDRAM_DEPTH)
+) fmlarb (
+	.sys_clk(sys_clk),
+	.sys_rst(sys_rst),
+	
+//	 VGA framebuffer (high priority) 
+
+	.m0_adr(fml_vga_adr),
+	.m0_stb(fml_vga_stb),
+	.m0_we(1'b0),
+	.m0_ack(fml_vga_ack),
+	.m0_sel(8'bx),
+	.m0_di(64'bx),
+	.m0_do(fml_vga_dr),
+	
+//	 WISHBONE bridge 
+	.m1_adr(fml_brg_adr),
+	.m1_stb(fml_brg_stb),
+	.m1_we(fml_brg_we),
+	.m1_ack(fml_brg_ack),
+	.m1_sel(fml_brg_sel),
+	.m1_di(fml_brg_dw),
+	.m1_do(fml_brg_dr),
+	
+//	 TMU, pixel read DMA 
+
+	.m2_adr(fml_tmur_adr),
+	.m2_stb(fml_tmur_stb),
+	.m2_we(1'b0),
+	.m2_ack(fml_tmur_ack),
+	.m2_sel(8'bx),
+	.m2_di(64'bx),
+	.m2_do(fml_tmur_dr),
+	
+//	 TMU, pixel write DMA
+
+	.m3_adr(fml_tmuw_adr),
+	.m3_stb(fml_tmuw_stb),
+	.m3_we(1'b1),
+	.m3_ack(fml_tmuw_ack),
+	.m3_sel(fml_tmuw_sel),
+	.m3_di(fml_tmuw_dw),
+	.m3_do(),
+	
+	.s_adr(fml_adr),
+	.s_stb(fml_stb),
+	.s_we(fml_we),
+	.s_ack(fml_ack),
+	.s_sel(fml_sel),
+	.s_di(fml_dr),
+	.s_do(fml_dw)
+);
+*/
+//FML bridge
+
+fmlbrg_b #(
+	.fml_depth(`SDRAM_DEPTH)
+) fmlbrg (
+	.sys_clk(sys_clk),
+	.sys_rst(sys_rst),
+	
+	.wb_adr_i(brg_adr),
+	.wb_cti_i(brg_cti),
+	.wb_dat_o(brg_dat_r),
+	.wb_dat_i(brg_dat_w),
+	.wb_sel_i(brg_sel),
+	.wb_stb_i(brg_stb),
+	.wb_cyc_i(brg_cyc),
+	.wb_ack_o(brg_ack),
+	.wb_we_i(brg_we),
+	
+	.fml_adr(fml_brg_adr),
+	.fml_stb(fml_brg_stb),
+	.fml_we(fml_brg_we),
+	.fml_ack(fml_brg_ack),
+	.fml_sel(fml_brg_sel),
+	.fml_di(fml_brg_dr),
+	.fml_do(fml_brg_dw)
+);
+
+
+////////////////////////////////////////////////////
+///////////////////////////////////////////////////
+
+
+
+
+interface_ddr_16_bit interface(
+
+	.sys_clk(sys_clk),
+	.sys_rst(sys_rst),
+
+// FMLARB side
+	.fml_adr_bus(fml_brg_adr),
+	.fml_stb_bus(fml_brg_stb),
+	.fml_we_bus(fml_brg_we),
+	.fml_ack_bus(fml_brg_ack),
+	.fml_sel_bus(fml_brg_sel),
+	.fml_di_bus(fml_brg_dw),
+	.fml_do_bus(fml_brg_dr),
+
+//FML ddr side
+
+
+	.fml_stb_ddr(fml_stb_ddr),
+	.fml_sel_ddr(fml_sel_ddr),
+	.fml_we_ddr(fml_we_ddr),
+
+	.fml_ack_ddr(fml_ack_ddr),
+	.fml_di_ddr(fml_dr_ddr),
+
+	.fml_adr_ddr(fml_adr_ddr),
+	.fml_do_ddr(fml_dw_ddr)
+);
+
+
+/*
+interface_ddr_16_bit_b interface(
+
+	.sys_clk(sys_clk),
+	.sys_rst(sys_rst),
+
+// Wishbone side
+
+	.wb_adr_i(brg_adr),
+	.wb_cti_i(brg_cti),
+	.wb_dat_o(brg_dat_r),
+	.wb_dat_i(brg_dat_w),
+	.wb_sel_i(brg_sel),
+	.wb_stb_i(brg_stb),
+	.wb_cyc_i(brg_cyc),
+	.wb_ack_o(brg_ack),
+	.wb_we_i(brg_we),
+
+//FML ddr side
+
+
+	.fml_stb_ddr(fml_stb_ddr),
+	.fml_sel_ddr(fml_sel_ddr),
+	.fml_we_ddr(fml_we_ddr),
+
+	.fml_ack_ddr(fml_ack_ddr),
+	.fml_di_ddr(fml_dw_ddr),
+
+	.fml_adr_ddr(fml_adr_ddr),
+	.fml_do_ddr(fml_dr_ddr)
+);
+*/
+
+//---------------------------------------------------------------------------
+// DDR SDRAM
+//---------------------------------------------------------------------------
+ddram #(
+	.csr_addr(4'h2)
+) ddram (
+	.clk_in(sys_clk),//clk_100Mhz//
+	.clk_fb(sys_clk_fb),
+	.sys_clk_n(sys_clk_n),
+	.sys_clk(sys_clk),
+	.sys_rst(sys_rst),//dcm_rst
+	
+	.rst_in(rst1),
+
+	.csr_a(csr_a),
+	.csr_we(csr_we),
+	.csr_di(csr_dw),
+	.csr_do(csr_dr_hpdmc),
+
+	.fml_adr(fml_adr_ddr),
+	.fml_stb(fml_stb_ddr),
+	.fml_we(fml_we_ddr),
+	.fml_ack(fml_ack_ddr),
+	.fml_sel(fml_sel_ddr),//fml_sel_ddr//4'b1111
+	.fml_di(fml_dw_ddr),
+	.fml_do(fml_dr_ddr),
+	
+	.sdram_clk_p(sdram_clk_p),
+	.sdram_clk_n(sdram_clk_n),
+	.sdram_cke(sdram_cke),
+	.sdram_cs_n(sdram_cs_n),
+	.sdram_we_n(sdram_we_n),
+	.sdram_cas_n(sdram_cas_n),
+	.sdram_ras_n(sdram_ras_n),
+	.sdram_dqm(sdram_dqm),
+	.sdram_adr(sdram_adr),
+	.sdram_ba(sdram_ba),
+	.sdram_dq(sdram_dq),
+	.sdram_dqs(sdram_dqs),
+	.sdram_dq_t(sdram_dq_t),
+	.sdram_dq_mon(sdram_dq_mon),
+	.sdram_dqs_mon(sdram_dqs_mon),
+	.di_a_mon(di_a_mon),
+	.di_buf_mon(di_buf_mon)
+);
+
+
+///------------------- DDR --------------------------
+/*
+wb_ddr #(
+	.phase_shift(0),
+	.clk_multiply(2),
+	.clk_divide(1),
+	.wait200_init(8000)
+) wb_ddr(
+	.clk(sys_clk), 
+	.reset(ddr_rst),
+	.clk_2x(ram_clk),
+	.clk_2x_n(ram_clk_n),
+	// XXX -- DCM phase control -- XXX
+	.rot(2'b0),    
+	//  DDR ports
+	.ddr_clk(),
+	.ddr_clk_n(),
+	.ddr_clk_fb(),
+	.ddr_ras_n(sdram_ras_n),
+	.ddr_cas_n(sdram_cas_n),
+	.ddr_we_n(sdram_we_n),
+	.ddr_cke(sdram_cke),
+	.ddr_cs_n(sdram_cs_n),
+	.ddr_a(sdram_adr),
+	.ddr_ba(sdram_ba),
+	.ddr_dq(sdram_dq),
+	.ddr_dqs(sdram_dqs),
+	.ddr_dm(sdram_dm),
+		// Wishbone Slave Interface
+	.wb_adr_i(ddr_adr),
+	.wb_dat_i(ddr_dat_w),
+	.wb_dat_o(ddr_dat_r),
+	.wb_sel_i(ddr_sel),
+	.wb_cyc_i(ddr_cyc),
+	.wb_stb_i(ddr_stb),
+	.wb_we_i(ddr_we),
+	.wb_ack_o(ddr_ack)
+);
+
+*/
+
+/*
+ddr_ctrl #(
+	.clk_freq(     100000000         ),
+	.clk_multiply( 1 ),
+	.clk_divide(   1   ),
+	.phase_shift(  0  ),
+	.wait200_init( 20 )
+) ctrl0 (
+	.clk(     ram_clk    ),
+	.reset(   sys_rst  ),
+	// DDR Ports
+	.ddr_clk(      sdram_clk_p     ),
+	.ddr_clk_n(    sdram_clk_n   ),
+	.ddr_clk_fb(   sys_clk_fb  ),
+	.ddr_ras_n(    sdram_ras_n   ),
+	.ddr_cas_n(    sdram_cas_n   ),
+	.ddr_we_n(     sdram_we_n    ),
+	.ddr_cke(      sdram_cke     ),
+	.ddr_cs_n(     sdram_cs_n    ),
+	.ddr_a(        sdram_adr       ),
+	.ddr_ba(       sdram_ba      ),
+	.ddr_dq(       sdram_dq      ),
+	.ddr_dqs(      sdram_dqs     ),
+	.ddr_dm(       sdram_dm      ),
+	// FML (FastMemoryLink)
+	.fml_wr(       fml_wr      ),
+	.fml_rd(       fml_rd      ),
+	.fml_done(     fml_done    ),
+	.fml_adr(      fml_adr     ),
+	.fml_din(      fml_wdata   ),
+	.fml_msk(      fml_msk     ),
+	.fml_dout(     fml_rdata   ),
+	// phase shifting
+	.rot(          3'b0         )
+);
+*/
+
+
+//---------------------------------------------------------------------------
+// UART
+//---------------------------------------------------------------------------
+uart #(
+	.csr_addr(4'h0),
+	.clk_freq(`CLOCK_FREQUENCY),
+	.baud(`BAUD_RATE)
+) uart (
+	.sys_clk(sys_clk),
+	.sys_rst(sys_rst),
+
+	.csr_a(csr_a),
+	.csr_we(csr_we),
+	.csr_di(csr_dw),
+	.csr_do(csr_dr_uart),
+	
+	.rx_irq(uartrx_irq),
+	.tx_irq(uarttx_irq),
+	
+	.uart_rxd(uart_rx),
+	.uart_txd(uart_tx)
+);
+
+/*
+uart_core
+      #(.CLK_IN_MHZ(40),
+	.BAUD_RATE(115200)
+       )
+uart_core      (
+       // Global reset and clock
+       .RESET(sys_reset)    ,
+       .CLK(sys_clk)      ,
+      
+
+      
+  .UART_ADR_I(uart_adr)   ,
+       .UART_DAT_I(uart_dat_w)   ,
+       .UART_DAT_O(uart_dat_r)   ,
+       .UART_STB_I(uart_stb)   ,
+       .UART_CYC_I(uart_cyc)   ,
+       .UART_WE_I(uart_we)    ,
+       .UART_SEL_I(uart_sel)   ,
+       .UART_CTI_I()   ,
+       .UART_BTE_I(2'b0)   ,
+       .UART_LOCK_I()  ,
+       .UART_ACK_O(uart_ack)   ,
+       .UART_RTY_O()   ,
+       .UART_ERR_O(),
+       .INTR()     ,
+
+
+       // Receiver interface
+       .SIN(uart_rx_wb)      ,
+       // Transmitter interface
+       .SOUT(uart_tx_wb)
+       );
+*/
+
+
+
+/* LED0 and LED1 are used as TX/RX indicators.
+ * Generate long pulses so we have time to see them
+ */
+reg [18:0] rxcounter;
+reg rxled;
+always @(posedge sys_clk) begin
+	if(~uart_rx)
+		rxcounter <= {19{1'b1}};
+	else if(rxcounter != 19'd0)
+		rxcounter <= rxcounter - 19'd1;
+	rxled <= rxcounter != 19'd0;
+end
+
+reg [18:0] txcounter;
+reg txled;
+always @(posedge sys_clk) begin
+	if(~uart_tx)
+		txcounter <= {19{1'b1}};
+	else if(txcounter != 19'd0)
+		txcounter <= txcounter - 19'd1;
+	txled <= txcounter != 19'd0;
+end
+
+assign led[0] = txled;
+assign led[1] = rxled;
+
+//---------------------------------------------------------------------------
+// System Controller
+//---------------------------------------------------------------------------
+
+
+sysctl #(
+	.csr_addr(4'h1),
+	.ninputs(3),
+	.noutputs(32),
+	.systemid(32'h53334558) /* S3EX */ // cambio:
+				/*44453141  DE1A*/
+) sysctl (
+	.sys_clk(sys_clk),
+	.sys_rst(sys_rst),
+
+	.gpio_irq(gpio_irq),
+	.timer0_irq(timer0_irq),
+	.timer1_irq(timer1_irq),
+
+	.csr_a(csr_a),
+	.csr_we(csr_we),
+	.csr_di(csr_dw),
+	.csr_do(csr_dr_sysctl),
+
+	.gpio_inputs(btn),
+	.gpio_outputs(data_out),
+	//.gpio_outputs(led[7:2]), /* LED0 and LED1 are used as TX/RX indicators */
+
+	.capabilities(capabilities),
+
+	.hard_reset(hard_reset)
+);
+
+////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////
+
+sysctl #(
+	.csr_addr(4'h4),
+	.ninputs(1),
+	.noutputs(32),
+	.systemid(32'h53334558) /* S3EX */ // cambio:
+				/*44453141  DE1A*/
+) sysctl_b (
+	.sys_clk(sys_clk),
+	.sys_rst(sys_rst),
+
+	.gpio_irq(),
+	.timer0_irq(),
+	.timer1_irq(),
+
+	.csr_a(csr_a),
+	.csr_we(csr_we),
+	.csr_di(csr_dw),
+	.csr_do(csr_dr_sysctl_b),
+
+//	.gpio_inputs(btn),
+	.gpio_outputs(data_out_b),
+	//.gpio_outputs(led[7:2]), /* LED0 and LED1 are used as TX/RX indicators */
+
+	.capabilities(capabilities),
+
+	.hard_reset()
+);
+
+//////////////////////////////////////////////////////////////////////////d/
+///////////////////////////////////////////////////////////////////////////
+sysctl #(
+	.csr_addr(4'h5),
+	.ninputs(1),
+	.noutputs(32),
+	.systemid(32'h53334558) /* S3EX */ // cambio:
+				/*44453141  DE1A*/
+) sysctl_c (
+	.sys_clk(sys_clk),
+	.sys_rst(sys_rst),
+
+	.gpio_irq(),
+	.timer0_irq(),
+	.timer1_irq(),
+
+	.csr_a(csr_a),
+	.csr_we(csr_we),
+	.csr_di(csr_dw),
+	.csr_do(csr_dr_sysctl_c),
+
+//	.gpio_inputs(btn),
+	.gpio_outputs(data_out_c),
+	//.gpio_outputs(led[7:2]), /* LED0 and LED1 are used as TX/RX indicators */
+
+	.capabilities(capabilities),
+
+	.hard_reset()
+);
+
+
+
+///////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////
+sysctl #(
+	.csr_addr(4'h6),
+	.ninputs(1),
+	.noutputs(32),
+	.systemid(32'h53334558) /* S3EX */ // cambio:
+				/*44453141  DE1A*/
+) sysctl_d (
+	.sys_clk(sys_clk),
+	.sys_rst(sys_rst),
+
+	.gpio_irq(),
+	.timer0_irq(),
+	.timer1_irq(),
+
+	.csr_a(csr_a),
+	.csr_we(csr_we),
+	.csr_di(csr_dw),
+	.csr_do(csr_dr_sysctl_d),
+
+//	.gpio_inputs(btn),
+	.gpio_outputs(data_out_d),
+	//.gpio_outputs(led[7:2]), /* LED0 and LED1 are used as TX/RX indicators */
+
+	.capabilities(capabilities),
+
+	.hard_reset()
+);
+
+
+
+
+
+gen_capabilities gen_capabilities(
+	.capabilities(capabilities)
+);
+
+//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+//%%%%%%%%%%%% 		LCD	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+reg [31:0] data_a;
+reg [31:0] data_b;
+
+always @(posedge sys_clk) begin
+	if(sys_rst) begin
+			data_a <= 32'b0 ;
+			data_b <= 32'b0;
+	end else begin
+	case(sw)
+		4'b0000: begin	
+			data_a <= cpudbus_adr ;
+			data_b <= cpudbus_dat_r;
+		end
+		4'b0001: begin
+			data_a <= data_out ;
+			data_b <= data_out_b; 			
+		end
+		4'b0010: begin
+			data_a <= data_out_c ;
+			data_b <= data_out_d; 			
+		end
+		4'b1000: begin
+			data_a <= phase_counter ;
+			data_b <= pulses_counter; 			
+		end
+		4'b1100: begin
+			data_a <= counter_a ;
+			data_b <= counter_b; 			
+		end
+		default: begin
+			data_a <= cpudbus_adr ;
+			data_b <= cpudbus_dat_r;
+		end
+	endcase
+	end
+end
+
+
+
+
+
+
+`ifndef SIMULATION
+`ifndef SIMULATION_DDR
+
+
+
+assign data_io[3:0] = (~flash_byte_n & rw) ? flash_d[11:8] : 4'bZ;
+assign flash_d[11:8] = (~flash_byte_n & ~rw) ? data_io[3:0] : 4'bZ;
+
+lcd #(
+
+/*
+	.width_timer(21),
+	.timer_135k(26),	// periodo de 1.3us
+	.timer_40ms(11539),	// 15 ms.. 11539
+	.timer_37us(31),	//40 us
+	.timer_1_52ms(1270),	//1.65ms .. 1270
+	.timer_1us(38),		// 1.05us
+	.timer_100us(77),	// 100us
+	.timer_4_1ms(3154),	// 4.1ms.. 3154
+	.timer_500ms(769231)	// 1s.. 769231
+
+
+*/
+	.width_timer(21),
+	.timer_135k(1300/`CLOCK_PERIOD_),	// periodo de 1.3us
+	.timer_40ms(11539),	// 15 ms.. 11539
+	.timer_37us(31),	//40 us
+	.timer_1_52ms(1270),	//1.65ms .. 1270
+	.timer_1us(38),		// 1.05us
+	.timer_100us(77),	// 100us
+	.timer_4_1ms(3154),	// 4.1ms.. 3154
+	.timer_500ms(192300)	// .25s.. 769231
+
+
+)  lcd (
+
+	.sf_byte(flash_byte_n),
+//	.buffer_data(instr),
+//	.buffer_data(m_addr),
+	.buffer_data_b(data_b),//addr_read 
+//	.buffer_data(data_read_flash),
+//	.buffer_data(cpudbus_dat_r),//norflash_dat_r
+//	.buffer_data(31'h1234abcd),
+	.buffer_data(data_a),
+	.rst(sys_rst),
+	.clkin(sys_clk),
+	.e(e),
+	.rs(rs),
+	.rw(rw_),
+	.data_io(data_io) 
+
+);
+
+assign rw = rw_ & flash_oe_n;
+
+`endif
+`endif
+
+
+
+
+
+//---------------------------------------------------------------------------
+// Ethernet
+//---------------------------------------------------------------------------
+`ifdef ENABLE_ETHERNET
+/*wire phy_tx_clk_b0;
+wire phy_tx_clk_b;
+*/
+/*BUFG b_phy_tx_clk0(
+	.I(phy_tx_clk),
+	.O(phy_tx_clk_b0)
+);*/
+/*
+BUFG b_phy_tx_clk(
+	.I(phy_tx_clk),
+	.O(phy_tx_clk_b)
+);
+*/
+/*
+wire phy_rx_clk_b0;
+wire phy_rx_clk_b;
+BUFG b_phy_rx_clk0(
+	.I(phy_rx_clk),
+	.O(phy_rx_clk_b0)
+);*/
+/*
+BUFG b_phy_rx_clk(
+	.I(phy_rx_clk),
+	.O(phy_rx_clk_b)
+);
+*/
+minimac #(
+	.csr_addr(4'h9)
+) ethernet (
+	.sys_clk(sys_clk),
+	.sys_rst(sys_rst),
+
+	.csr_a(csr_a),
+	.csr_we(csr_we),
+	.csr_di(csr_dw),
+	.csr_do(csr_dr_ethernet),
+
+	.wbrx_adr_o(eth_rx_addr),
+	.wbrx_cti_o(eth_rx_cti),
+	.wbrx_cyc_o(eth_rx_cyc),
+	.wbrx_stb_o(eth_rx_stb),
+	.wbrx_ack_i(eth_rx_ack),
+	.wbrx_dat_o(eth_rx_dat_w),
+
+	.wbtx_adr_o(eth_tx_addr),
+	.wbtx_cti_o(eth_tx_cti),
+	.wbtx_cyc_o(eth_tx_cyc),
+	.wbtx_stb_o(eth_tx_stb),
+	.wbtx_ack_i(eth_tx_ack),
+	.wbtx_dat_i(eth_tx_dat_r),
+
+	.irq_rx(ethernetrx_irq),
+	.irq_tx(ethernettx_irq),
+
+	.phy_tx_clk(phy_tx_clk),
+	.phy_tx_data(phy_tx_data),
+	.phy_tx_en(phy_tx_en),
+	.phy_tx_er(phy_tx_er),
+	.phy_rx_clk(phy_rx_clk),
+	.phy_rx_data(phy_rx_data),
+	.phy_dv(phy_dv),
+	.phy_rx_er(1'b0),
+	.phy_col(phy_col),
+	.phy_crs(phy_crs),
+	.phy_mii_clk(phy_mii_clk),
+	.phy_mii_data(phy_mii_data)
+);
+`else
+assign csr_dr_ethernet = 32'd0;
+assign eth_rx_addr = 32'bx;
+assign eth_rx_cti = 3'bx;
+assign eth_rx_cyc = 1'b0;
+assign eth_rx_stb = 1'b0;
+assign eth_rx_dat_w = 32'bx;
+assign eth_tx_adr = 32'bx;
+assign eth_tx_cti = 3'bx;
+assign eth_tx_cyc = 1'b0;
+assign eth_tx_stb = 1'b0;
+assign eth_tx_dat_r = 32'bx;
+assign ethernetrx_irq = 1'b0;
+assign ethernettx_irq = 1'b0;
+assign phy_tx_data = 4'b0;
+assign phy_tx_en = 1'b0;
+assign phy_tx_er = 1'b0;
+assign phy_mii_clk = 1'b0;
+assign phy_mii_data = 1'bz;
+`endif
+
+
+
+
+
+
+
+
+//always @(posedge clk50) phy_clk <= ~phy_clk;
+//wire [15:0] sdram_dq_mon;
+//assign sdram_dq_mon = (~sdram_dq_t) ? sdram_dq : 16'bZ;
+
+/*
+system_monitor sys_mon(
+	.clk(clkin),
+	.rst(resetin),
+	
+	//measure signals
+	.sys_clk(sys_clk),
+	.sdram_dq(sdram_dq_mon),
+	.sdram_dqs(sdram_dqs),
+	.sdram_cs_n(sdram_cs_n),
+	.sdram_ras_n(sdram_ras_n),
+	.sdram_cas_n(sdram_cas_n),
+	.sdram_we_n(sdram_we_n),
+
+
+	// control signals
+	.enable_capture(fml_brg_stb & fml_brg_we),
+	.end_capture( ~fml_brg_stb & ~fml_brg_we),
+
+	//uart_signals
+	.uart_tx_mon(uart_tx_mon),
+	.uart_rx_mon(uart_rx_mon)
+);
+*/
+
+
+
+
+endmodule
+
+

@@ -22,20 +22,23 @@ INST "b_sys_clk_n" LOC = BUFGMUX_X2Y10;
 #----------------------------
 #	 dqs clk
 #----------------------------
-INST "ddram/clkgen_dqs" LOC = DCM_X0Y0;
 
-INST "ddram/b_dqs_p" LOC = BUFGMUX_X1Y0;
-INST "ddram/b_dqs_n" LOC = BUFGMUX_X1Y1;
+#INST "ddram/clkgen_dqs" LOC = DCM_X0Y0;
+
+#INST "ddram/b_dqs_p" LOC = BUFGMUX_X1Y0;
+#INST "ddram/b_dqs_n" LOC = BUFGMUX_X1Y1;
 
 
 #----------------------------
 #	 dqs clk delayed
 #----------------------------
-INST "ddram/clkgen_dqs_delayed" LOC = DCM_X1Y0;
+#INST "ddram/clkgen_dqs_delayed" LOC = DCM_X1Y0;
 
-INST "ddram/b_dqs_p_delayed" LOC = BUFGMUX_X2Y0;
-INST "ddram/b_dqs_n_delayed" LOC = BUFGMUX_X2Y1;
+#INST "ddram/b_dqs_p_delayed" LOC = BUFGMUX_X2Y0;
+#INST "ddram/b_dqs_n_delayed" LOC = BUFGMUX_X2Y1;
 
+
+######################################
 
 #INST "ddram/b_dqs_0" LOC = BUFGMUX_X2Y0;
 

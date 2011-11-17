@@ -1,0 +1,23 @@
+[size] 1268 722
+[pos] -1 -1
+*-16.000000 371175100 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] system_tb.
+[treeopen] system_tb.system.
+[treeopen] system_tb.system.cpu.
+[treeopen] system_tb.system.cpu.cpu.
+@28
+system_tb.system.sampling.sample_clk
+system_tb.system.sys_clk
+@29
+system_tb.system.fml_stb_ddr
+@28
+system_tb.system.sdram_dq_t
+system_tb.system.sdram_dqs_mon[1:0]
+@22
+system_tb.system.sdram_dq_mon[15:0]
+system_tb.system.fml_dr_ddr[31:0]
+system_tb.system.fml_dw_ddr[31:0]
+system_tb.system.fml_brg_dr[31:0]
+@28
+system_tb.system.fml_ack_ddr
+system_tb.system.sampling.start_stop

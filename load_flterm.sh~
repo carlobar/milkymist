@@ -1,0 +1,4 @@
+#!/bin/bash
+
+tools/flterm --port /dev/ttyUSB0 --kernel software/app/app.elf --kernel-adr 0x40000010
+

@@ -1,0 +1,1 @@
+./digilent-xc3s500e/rtl/setup.v

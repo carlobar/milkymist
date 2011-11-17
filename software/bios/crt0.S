@@ -27,6 +27,8 @@
 .section    .text, "ax", @progbits
 .global     _start
 .global 	print_lcd 
+.global		copy_app_a
+.global		copy_app_b
 _start:
 _reset_handler:
 	xor	r0, r0, r0
@@ -96,23 +98,26 @@ _crt0:
 	ori     gp, gp, lo(_gp)
 
 	/* Clear BSS */
-/*
+
 	mvhi    r1, hi(_fbss)
 	ori     r1, r1, lo(_fbss)
 	mvhi    r3, hi(_ebss)
 	ori     r3, r3, lo(_ebss)
-*/
 
+/*
 	mvhi    r1, hi(0x40000000)
 	ori     r1, r1, lo(0x40000000)
 	mvhi    r3, hi(0x40000010)
 	ori     r3, r3, lo(0x40000010)
-
+*/
 .clearBSS:
 	be      r1, r3, .callMain
 	sw      (r1+0), r0
 	addi    r1, r1, 4
 	bi      .clearBSS
+
+
+
 
 .callMain:
 
@@ -121,7 +126,7 @@ _crt0:
 	mvhi r19, hi(0xe0005004)
 	ori  r19, r19, lo(0xe0005004)
 	sw   (r19+0), r4	
-
+/*
 	mvhi r4, hi(0xabadface)
 	ori  r4, r4, lo(0xabadface)
 
@@ -132,7 +137,7 @@ _crt0:
 	ori  r19, r19, lo(0x44000000)
 	sw   (r19+0), r4
 	sw   (r19+4), r5
-
+*/
 	mv      r1, r2
 	mvi     r2, 0
 	mvi     r3, 0
@@ -204,3 +209,68 @@ print_lcd:
 	sw   (r19+0), r5
 	ret
 
+///////////////////////////////////////////////////////////
+/*
+copy_app_b:
+
+
+	mvhi    r1, hi(_start_app_b)
+	ori     r1, r1, lo(_start_app_b)
+	mvhi    r3, hi(_end_app_b)
+	ori     r3, r3, lo(_end_app_b)
+	mvhi    r5, hi(0x40000000)
+	ori     r5, r5, lo(0x40000000)
+
+
+	mvhi r19, hi(0xe0004004)	// visualizar lectura en lcd
+	ori  r19, r19, lo(0xe0004004)
+	sw   (r19+0), r1
+
+	mvhi r19, hi(0xe0001004)	// visualizar lectura en lcd
+	ori  r19, r19, lo(0xe0001004)
+	sw   (r19+0), r3
+
+
+copy_data_b:
+	be      r1, r3, end_load_app_b
+	lw	r6, (r1+0)
+	sw      (r5+0), r6
+	addi    r1, r1, 4
+	addi    r5, r5, 4
+	bi      copy_data_b
+end_load_app_b:
+	ret
+
+
+
+///////////////////////////////////////////////////////////
+copy_app_a:
+
+
+
+	mvhi    r1, hi(_start_app_a)
+	ori     r1, r1, lo(_start_app_a)
+	mvhi    r3, hi(_end_app_a)
+	ori     r3, r3, lo(_end_app_a)
+	mvhi    r5, hi(0x40000000)
+	ori     r5, r5, lo(0x40000000)
+
+	mvhi r19, hi(0xe0004004)	// visualizar lectura en lcd
+	ori  r19, r19, lo(0xe0004004)
+	sw   (r19+0), r1
+
+	mvhi r19, hi(0xe0001004)	// visualizar lectura en lcd
+	ori  r19, r19, lo(0xe0001004)
+	sw   (r19+0), r3
+
+
+copy_data_a:
+	be      r1, r3, end_load_app_a
+	lw	r6, (r1+0)
+	sw      (r5+0), r6
+	addi    r1, r1, 4
+	addi    r5, r5, 4
+	bi      copy_data_a
+end_load_app_a:
+	ret
+*/

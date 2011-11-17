@@ -88,15 +88,14 @@ module system(
 	inout phy_mii_data,
 
 
-	//output phy_tx_er,
-//	input phy_rx_er,
+	output phy_tx_er,
+	input phy_rx_er,
 	input phy_irq_n,
 	//output reg phy_clk,
 
 
 // switches
 	input [3:0]	sw,
-
 	input [1:0]	rot,
 
 	// VGA
@@ -327,6 +326,31 @@ end
 
 assign dcm_rst = dcm_rstcounter[5] & dcm_rstcounter[3];
 */
+
+
+reg	lcd_rst;
+initial lcd_rst <= 1'b1
+;
+reg [7:0] lcd_rstcounter;
+initial lcd_rstcounter <= 8'd0;
+
+always @(posedge sys_clk) begin
+	if(btn[2])
+		lcd_rstcounter <= 8'b00010000;
+	else if(lcd_rstcounter != 8'd0)
+		lcd_rstcounter <= lcd_rstcounter - 8'd1;
+	else
+		lcd_rstcounter <= lcd_rstcounter;
+	lcd_rst = lcd_rstcounter != 8'd0;
+
+end
+
+
+
+
+
+
+
 `else
 wire sys_rst;
 assign sys_rst = resetin;
@@ -779,15 +803,15 @@ conbus5x6 #(
 	.s0_ack_i(norflash_ack),
 	// Slave 1
 
-	.s1_dat_i(32'bx),//bram_dat_r
-	.s1_dat_o(bram_dat_w),
-	.s1_adr_o(bram_adr),
-	.s1_cti_o(bram_cti),
-	.s1_sel_o(bram_sel),
-	.s1_we_o(bram_we),
-	.s1_cyc_o(bram_cyc),
-	.s1_stb_o(bram_stb),
-	.s1_ack_i(1'b0),//bram_ack
+	.s1_dat_i(32'bx),//
+	.s1_dat_o(),
+	.s1_adr_o(),
+	.s1_cti_o(),
+	.s1_sel_o(),
+	.s1_we_o(),
+	.s1_cyc_o(),
+	.s1_stb_o(),
+	.s1_ack_i(1'b0),//1'b0
 
 	// Slave 2
 	.s2_dat_i(32'd0),
@@ -812,6 +836,17 @@ conbus5x6 #(
 	.s3_ack_i(eth_ack),
 
 	// Slave 4
+`ifndef ENABLE_SDRAM
+	.s4_dat_i(bram_dat_r),//32'bx
+	.s4_dat_o(bram_dat_w),
+	.s4_adr_o(bram_adr),
+	.s4_cti_o(bram_cti),
+	.s4_sel_o(bram_sel),
+	.s4_we_o(bram_we),
+	.s4_cyc_o(bram_cyc),
+	.s4_stb_o(bram_stb),
+	.s4_ack_i(bram_ack),//1'b0
+`else
 	.s4_dat_i(brg_dat_r),
 	.s4_dat_o(brg_dat_w),
 	.s4_adr_o(brg_adr),
@@ -821,7 +856,7 @@ conbus5x6 #(
 	.s4_cyc_o(brg_cyc),
 	.s4_stb_o(brg_stb),
 	.s4_ack_i(brg_ack),
-
+`endif
 	// Slave 5
 	.s5_dat_i(csrbrg_dat_r),
 	.s5_dat_o(csrbrg_dat_w),
@@ -995,7 +1030,7 @@ assign flash_ce_n = 1'b0;
 // On this board, we have 16k of SRAM instead of 4k
 // so that we have space for loading some programs.
 //
-/*
+
 bram #(
 	.adr_width(14)
 ) bram (
@@ -1012,7 +1047,7 @@ bram #(
 	.wb_we_i(bram_we)
 );
 
-*/
+
 
 
 
@@ -1174,6 +1209,7 @@ interface_ddr_16_bit_b interface(
 //---------------------------------------------------------------------------
 // DDR SDRAM
 //---------------------------------------------------------------------------
+`ifdef ENABLE_SDRAM
 ddram #(
 	.csr_addr(4'h2)
 ) ddram (
@@ -1216,7 +1252,7 @@ ddram #(
 	.di_a_mon(di_a_mon),
 	.di_buf_mon(di_buf_mon)
 );
-
+`endif
 
 ///------------------- DDR --------------------------
 /*
@@ -1636,7 +1672,7 @@ lcd #(
 //	.buffer_data(cpudbus_dat_r),//norflash_dat_r
 //	.buffer_data(31'h1234abcd),
 	.buffer_data(data_a),
-	.rst(sys_rst),
+	.rst(sys_rst | lcd_rst),
 	.clkin(sys_clk),
 	.e(e),
 	.rs(rs),
@@ -1709,7 +1745,7 @@ minimac2 #(
 	.phy_rst_n(phy_rst_n)
 );
 
-assign phy_rx_er = 1'b0;
+//assign phy_rx_er = 1'b0;
 
 `else
 assign csr_dr_ethernet = 32'd0;

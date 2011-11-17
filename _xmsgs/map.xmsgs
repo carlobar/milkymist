@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- IMPORTANT: This is an internal file that has been generated
+     by the Xilinx ISE software.  Any direct editing or
+     changes made to this file may result in unpredictable
+     behavior or data corruption.  It is strongly advised that
+     users do not edit the contents of this file. -->
+<messages>
+<msg type="info" file="LIT" num="243" delta="new" >Logical network <arg fmt="%s" index="1">rot&lt;1&gt;_IBUF</arg> has no load.
+</msg>
+
+<msg type="info" file="LIT" num="243" delta="new" >Logical network <arg fmt="%s" index="1">rot&lt;0&gt;_IBUF</arg> has no load.
+</msg>
+
+<msg type="info" file="MapLib" num="564" delta="new" >The following environment variables are currently set:
+</msg>
+
+<msg type="info" file="MapLib" num="591" delta="new" ><arg fmt="%s" index="1">XIL_MAP_OLD_SAVE</arg> 	Value: <arg fmt="%s" index="2">:1</arg>
+</msg>
+
+<msg type="info" file="MapLib" num="159" delta="new" >Net Timing constraints on signal <arg fmt="%s" index="1">clk_in</arg> are pushed forward through input buffer.
+</msg>
+
+<msg type="info" file="LIT" num="244" delta="new" >All of the single ended outputs in this design are using slew rate limited output drivers. The delay on speed critical single ended outputs can be dramatically reduced by designating them as fast outputs.
+</msg>
+
+<msg type="warning" file="Pack" num="266" delta="new" >The function generator <arg fmt="%s" index="1">graph/pixel_i/rgb&lt;2&gt;21</arg> failed to merge with F5 multiplexer <arg fmt="%s" index="2">graph/pixel_i/rgb&lt;1&gt;1146_f5</arg>.  <arg fmt="%z" index="3">There is a conflict for the FXMUX.</arg>  The design will exhibit suboptimal timing.
+</msg>
+
+<msg type="warning" file="PhysDesignRules" num="372" delta="new" >Gated clock. Clock net <arg fmt="%s" index="1">lcd/busy_data_and0000</arg> is sourced by a combinatorial pin. This is not good design practice. Use the CE pin to control the loading of data into the flip-flop.
+</msg>
+
+<msg type="warning" file="PhysDesignRules" num="368" delta="new" >The signal &lt;<arg fmt="%s" index="1">ddram/hpdmc/ddrio/sdram_dq_out&lt;2&gt;</arg>&gt; is incomplete. The signal is not driven by any source pin in the design.
+</msg>
+
+<msg type="warning" file="PhysDesignRules" num="368" delta="new" >The signal &lt;<arg fmt="%s" index="1">ddram/hpdmc/ddrio/sdram_dq_out&lt;10&gt;</arg>&gt; is incomplete. The signal is not driven by any source pin in the design.
+</msg>
+
+<msg type="warning" file="PhysDesignRules" num="368" delta="new" >The signal &lt;<arg fmt="%s" index="1">ddram/hpdmc/ddrio/sdram_dq_out&lt;4&gt;</arg>&gt; is incomplete. The signal is not driven by any source pin in the design.
+</msg>
+
+<msg type="warning" file="PhysDesignRules" num="368" delta="new" >The signal &lt;<arg fmt="%s" index="1">ddram/hpdmc/ddrio/sdram_dq_out&lt;12&gt;</arg>&gt; is incomplete. The signal is not driven by any source pin in the design.
+</msg>
+
+<msg type="warning" file="PhysDesignRules" num="368" delta="new" >The signal &lt;<arg fmt="%s" index="1">ddram/hpdmc/ddrio/sdram_dq_out&lt;14&gt;</arg>&gt; is incomplete. The signal is not driven by any source pin in the design.
+</msg>
+
+<msg type="warning" file="PhysDesignRules" num="368" delta="new" >The signal &lt;<arg fmt="%s" index="1">ddram/hpdmc/ddrio/sdram_dq_out&lt;7&gt;</arg>&gt; is incomplete. The signal is not driven by any source pin in the design.
+</msg>
+
+<msg type="warning" file="PhysDesignRules" num="368" delta="new" >The signal &lt;<arg fmt="%s" index="1">ddram/hpdmc/ddrio/sdram_dq_out&lt;1&gt;</arg>&gt; is incomplete. The signal is not driven by any source pin in the design.
+</msg>
+
+<msg type="warning" file="PhysDesignRules" num="368" delta="new" >The signal &lt;<arg fmt="%s" index="1">ddram/hpdmc/ddrio/sdram_dq_out&lt;9&gt;</arg>&gt; is incomplete. The signal is not driven by any source pin in the design.
+</msg>
+
+<msg type="warning" file="PhysDesignRules" num="368" delta="new" >The signal &lt;<arg fmt="%s" index="1">ddram/hpdmc/ddrio/sdram_dq_out&lt;3&gt;</arg>&gt; is incomplete. The signal is not driven by any source pin in the design.
+</msg>
+
+<msg type="warning" file="PhysDesignRules" num="368" delta="new" >The signal &lt;<arg fmt="%s" index="1">ddram/hpdmc/ddrio/sdram_dq_out&lt;11&gt;</arg>&gt; is incomplete. The signal is not driven by any source pin in the design.
+</msg>
+
+<msg type="warning" file="PhysDesignRules" num="368" delta="new" >The signal &lt;<arg fmt="%s" index="1">ddram/hpdmc/ddrio/sdram_dq_out&lt;5&gt;</arg>&gt; is incomplete. The signal is not driven by any source pin in the design.
+</msg>
+
+<msg type="warning" file="PhysDesignRules" num="368" delta="new" >The signal &lt;<arg fmt="%s" index="1">ddram/hpdmc/ddrio/sdram_dq_out&lt;13&gt;</arg>&gt; is incomplete. The signal is not driven by any source pin in the design.
+</msg>
+
+<msg type="warning" file="PhysDesignRules" num="368" delta="new" >The signal &lt;<arg fmt="%s" index="1">ddram/hpdmc/ddrio/sdram_dq_out&lt;6&gt;</arg>&gt; is incomplete. The signal is not driven by any source pin in the design.
+</msg>
+
+<msg type="warning" file="PhysDesignRules" num="368" delta="new" >The signal &lt;<arg fmt="%s" index="1">led&lt;6&gt;_OBUF</arg>&gt; is incomplete. The signal is not driven by any source pin in the design.
+</msg>
+
+<msg type="warning" file="PhysDesignRules" num="367" delta="new" >The signal &lt;<arg fmt="%s" index="1">rot&lt;0&gt;_IBUF</arg>&gt; is incomplete. The signal does not drive any load pins in the design.
+</msg>
+
+<msg type="warning" file="PhysDesignRules" num="367" delta="new" >The signal &lt;<arg fmt="%s" index="1">rot&lt;1&gt;_IBUF</arg>&gt; is incomplete. The signal does not drive any load pins in the design.
+</msg>
+
+<msg type="warning" file="PhysDesignRules" num="368" delta="new" >The signal &lt;<arg fmt="%s" index="1">ddram/hpdmc/ddrio/sdram_dq_out&lt;15&gt;</arg>&gt; is incomplete. The signal is not driven by any source pin in the design.
+</msg>
+
+<msg type="warning" file="PhysDesignRules" num="368" delta="new" >The signal &lt;<arg fmt="%s" index="1">ddram/hpdmc/ddrio/sdram_dq_out&lt;0&gt;</arg>&gt; is incomplete. The signal is not driven by any source pin in the design.
+</msg>
+
+<msg type="warning" file="PhysDesignRules" num="368" delta="new" >The signal &lt;<arg fmt="%s" index="1">ddram/hpdmc/ddrio/sdram_dq_out&lt;8&gt;</arg>&gt; is incomplete. The signal is not driven by any source pin in the design.
+</msg>
+
+<msg type="warning" file="PhysDesignRules" num="781" delta="new" ><arg fmt="%s" index="1">PULLUP</arg> on an active net. <arg fmt="%s" index="2">PULLUP</arg> of comp <arg fmt="%s" index="3">led&lt;7&gt;</arg> is set but the tri state is not configured. 
+</msg>
+
+<msg type="info" file="PhysDesignRules" num="772" delta="new" >To achieve optimal frequency synthesis performance with the CLKFX and CLKFX180 outputs of the DCM comp <arg fmt="%s" index="1">clkgen_sys</arg>, consult the device Interactive Data Sheet.
+</msg>
+
+<msg type="info" file="PhysDesignRules" num="772" delta="new" >To achieve optimal frequency synthesis performance with the CLKFX and CLKFX180 outputs of the DCM comp <arg fmt="%s" index="1">sampling/clkgen_sample</arg>, consult the device Interactive Data Sheet.
+</msg>
+
+<msg type="warning" file="PhysDesignRules" num="777" delta="new" >Incomplete DCM configuration. The DCM comp <arg fmt="%s" index="1">sampling/clkgen_sample</arg> is set for variable phase shifting with CLKOUT_PHASE_SHIFT set to VARIABLE. Therefore the phase shift pins (PSINCDEC, PSEN and PSCLK) should have active signals in order to implement variable phase shifting, if this implementation is wanted.
+</msg>
+
+<msg type="warning" file="PhysDesignRules" num="812" delta="new" >Dangling pin &lt;<arg fmt="%s" index="1">DOA11</arg>&gt; on block:&lt;<arg fmt="%s" index="2">sampling/buffer_posedge/Mram_mem_a4.A</arg>&gt;:&lt;<arg fmt="%s" index="3">RAMB16_RAMB16A</arg>&gt;.
+</msg>
+
+<msg type="warning" file="PhysDesignRules" num="812" delta="new" >Dangling pin &lt;<arg fmt="%s" index="1">DOA12</arg>&gt; on block:&lt;<arg fmt="%s" index="2">sampling/buffer_posedge/Mram_mem_a4.A</arg>&gt;:&lt;<arg fmt="%s" index="3">RAMB16_RAMB16A</arg>&gt;.
+</msg>
+
+<msg type="warning" file="PhysDesignRules" num="812" delta="new" >Dangling pin &lt;<arg fmt="%s" index="1">DOA13</arg>&gt; on block:&lt;<arg fmt="%s" index="2">sampling/buffer_posedge/Mram_mem_a4.A</arg>&gt;:&lt;<arg fmt="%s" index="3">RAMB16_RAMB16A</arg>&gt;.
+</msg>
+
+<msg type="warning" file="PhysDesignRules" num="812" delta="new" >Dangling pin &lt;<arg fmt="%s" index="1">DOA14</arg>&gt; on block:&lt;<arg fmt="%s" index="2">sampling/buffer_posedge/Mram_mem_a4.A</arg>&gt;:&lt;<arg fmt="%s" index="3">RAMB16_RAMB16A</arg>&gt;.
+</msg>
+
+<msg type="warning" file="PhysDesignRules" num="812" delta="new" >Dangling pin &lt;<arg fmt="%s" index="1">DOA15</arg>&gt; on block:&lt;<arg fmt="%s" index="2">sampling/buffer_posedge/Mram_mem_a4.A</arg>&gt;:&lt;<arg fmt="%s" index="3">RAMB16_RAMB16A</arg>&gt;.
+</msg>
+
+<msg type="warning" file="PhysDesignRules" num="812" delta="new" >Dangling pin &lt;<arg fmt="%s" index="1">DOA11</arg>&gt; on block:&lt;<arg fmt="%s" index="2">sampling/buffer_negedge/Mram_mem_a4.A</arg>&gt;:&lt;<arg fmt="%s" index="3">RAMB16_RAMB16A</arg>&gt;.
+</msg>
+
+<msg type="warning" file="PhysDesignRules" num="812" delta="new" >Dangling pin &lt;<arg fmt="%s" index="1">DOA12</arg>&gt; on block:&lt;<arg fmt="%s" index="2">sampling/buffer_negedge/Mram_mem_a4.A</arg>&gt;:&lt;<arg fmt="%s" index="3">RAMB16_RAMB16A</arg>&gt;.
+</msg>
+
+<msg type="warning" file="PhysDesignRules" num="812" delta="new" >Dangling pin &lt;<arg fmt="%s" index="1">DOA13</arg>&gt; on block:&lt;<arg fmt="%s" index="2">sampling/buffer_negedge/Mram_mem_a4.A</arg>&gt;:&lt;<arg fmt="%s" index="3">RAMB16_RAMB16A</arg>&gt;.
+</msg>
+
+<msg type="warning" file="PhysDesignRules" num="812" delta="new" >Dangling pin &lt;<arg fmt="%s" index="1">DOA14</arg>&gt; on block:&lt;<arg fmt="%s" index="2">sampling/buffer_negedge/Mram_mem_a4.A</arg>&gt;:&lt;<arg fmt="%s" index="3">RAMB16_RAMB16A</arg>&gt;.
+</msg>
+
+<msg type="warning" file="PhysDesignRules" num="812" delta="new" >Dangling pin &lt;<arg fmt="%s" index="1">DOA15</arg>&gt; on block:&lt;<arg fmt="%s" index="2">sampling/buffer_negedge/Mram_mem_a4.A</arg>&gt;:&lt;<arg fmt="%s" index="3">RAMB16_RAMB16A</arg>&gt;.
+</msg>
+
+<msg type="warning" file="PhysDesignRules" num="1063" delta="new" >Invalid configuration (incorrect pin connections and/or modes) on block:&lt;<arg fmt="%s" index="1">cpu/cpu/instruction_unit/icache/memories[1].way_0_data_ram/Mram_mem1.A</arg>&gt;:&lt;<arg fmt="%s" index="2">RAMB16_RAMB16A</arg>&gt;.  The block is configured to use an input parity pins. There is a dangling output parity pin.
+</msg>
+
+<msg type="warning" file="PhysDesignRules" num="1063" delta="new" >Invalid configuration (incorrect pin connections and/or modes) on block:&lt;<arg fmt="%s" index="1">cpu/cpu/instruction_unit/icache/memories[1].way_0_data_ram/Mram_mem2.A</arg>&gt;:&lt;<arg fmt="%s" index="2">RAMB16_RAMB16A</arg>&gt;.  The block is configured to use an input parity pins. There is a dangling output parity pin.
+</msg>
+
+<msg type="warning" file="PhysDesignRules" num="1063" delta="new" >Invalid configuration (incorrect pin connections and/or modes) on block:&lt;<arg fmt="%s" index="1">cpu/cpu/instruction_unit/icache/memories[1].way_0_data_ram/Mram_mem3.A</arg>&gt;:&lt;<arg fmt="%s" index="2">RAMB16_RAMB16A</arg>&gt;.  The block is configured to use an input parity pins. There is a dangling output parity pin.
+</msg>
+
+<msg type="warning" file="PhysDesignRules" num="1063" delta="new" >Invalid configuration (incorrect pin connections and/or modes) on block:&lt;<arg fmt="%s" index="1">cpu/cpu/instruction_unit/icache/memories[0].way_0_data_ram/Mram_mem1.A</arg>&gt;:&lt;<arg fmt="%s" index="2">RAMB16_RAMB16A</arg>&gt;.  The block is configured to use an input parity pins. There is a dangling output parity pin.
+</msg>
+
+<msg type="warning" file="PhysDesignRules" num="1063" delta="new" >Invalid configuration (incorrect pin connections and/or modes) on block:&lt;<arg fmt="%s" index="1">cpu/cpu/instruction_unit/icache/memories[0].way_0_data_ram/Mram_mem2.A</arg>&gt;:&lt;<arg fmt="%s" index="2">RAMB16_RAMB16A</arg>&gt;.  The block is configured to use an input parity pins. There is a dangling output parity pin.
+</msg>
+
+<msg type="warning" file="PhysDesignRules" num="1063" delta="new" >Invalid configuration (incorrect pin connections and/or modes) on block:&lt;<arg fmt="%s" index="1">cpu/cpu/instruction_unit/icache/memories[0].way_0_data_ram/Mram_mem3.A</arg>&gt;:&lt;<arg fmt="%s" index="2">RAMB16_RAMB16A</arg>&gt;.  The block is configured to use an input parity pins. There is a dangling output parity pin.
+</msg>
+
+<msg type="warning" file="PhysDesignRules" num="738" delta="new" >Unexpected DCM configuration. DCM comp <arg fmt="%s" index="1">ddram/clkgen_dqs</arg> has CLKOUT_PHASE_SHIFT set without a connection from CLKO or CLK2X to CLKFB. To achieve fine-grained phase shifting (CLKOUT_PHASE_SHIFT = FIXED or VARIABLE), CLKFB must be connected to either CLK0 or CLK2X.
+</msg>
+
+<msg type="warning" file="PhysDesignRules" num="739" delta="new" >Unexpected DCM feedback loop. The signal <arg fmt="%s" index="1">ddram/dqs_clk</arg> on the CLKFB pin of comp <arg fmt="%s" index="2">ddram/clkgen_dqs</arg> is not driven by an IOB or BUFGMUX therefore the phase relationship of output clocks to CLKIN cannot be guaranteed.
+</msg>
+
+</messages>
+

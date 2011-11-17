@@ -5,7 +5,7 @@ __DYNAMIC = 0;
 
 MEMORY {
 	flash : ORIGIN = 0x00860000, LENGTH = 0x20000    /* 128K */
-	sdram : ORIGIN = 0x40000000, LENGTH = 0x1000000  /* upper 64M of SDRAM */
+	sdram : ORIGIN = 0x40000000, LENGTH = 0xa00000  /* upper 64M of SDRAM */
 }
 
 SECTIONS
@@ -36,7 +36,19 @@ SECTIONS
 		_gp = ALIGN(16);
 		*(.sdata .sdata.* .gnu.linkonce.s.*)
 		_edata = .;
+/*
+		. = ALIGN(4);
+		_start_app_a = .;
+		app_a.o(*)
+		. = ALIGN(4);
+		_end_app_a = .;
+		_start_app_b = .;
+		app_b.o(*)
+		_end_app_b = .;
+*/
 	} > flash
+	
+
 
 	.bss :
 	{

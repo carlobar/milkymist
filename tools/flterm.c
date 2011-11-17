@@ -219,6 +219,7 @@ static void answer_magic(int serialfd,
 	write_exact(serialfd, sfl_magic_ack, SFL_MAGIC_LEN);
 	
 	upload_fd(serialfd, "kernel", kernelfd, kernel_address);
+
 	if(cmdline != NULL) {
 		int len;
 

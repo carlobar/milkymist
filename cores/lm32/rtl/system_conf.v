@@ -1,0 +1,1 @@
+../../../boards/digilent-xc3s500e/rtl/system_conf.v

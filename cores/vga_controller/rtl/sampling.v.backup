@@ -1,0 +1,409 @@
+module sampling
+#(
+	parameter data_size = 18,	
+	parameter mem_width = 5,
+	parameter samples = 25
+)
+(
+//	input   clk_fb_main,
+	input	clk_50Mhz,
+	input	in_dcm,
+	input sys_rst,
+	input dcm_rst,
+	input [1:0] rot,
+
+	input start_stop,
+
+	// sampling signals
+	input clk,
+	input stb,
+	input we,
+	input [1:0] dqs,
+	input [15:0] dq,
+	input [31:0] do,
+	input [31:0] di,
+	input [31:0] dr_fml,
+	input	ack,
+
+	//vga signals
+	output vga_hsync,
+	output vga_vsync,
+	output [2:0] rgb,
+	output [31:0] phase_counter,
+	output [31:0] pulses_counter,
+	output reg [31:0] counter_a,
+	output reg [31:0] counter_b
+
+);
+
+
+wire sample_clk_dcm, sample_clk_dcm_n, sample_clk, sample_clk_n;
+wire clk_fb, clk_fb_dcm;
+wire psen, psincdec,psdone, locked;
+//wire [31:0]counter;
+////////////////////////////////////////////////////////////////////
+///////////////////////  DCM  /////////////////////////////
+
+
+
+DCM_SP #(
+	.CLKDV_DIVIDE(2.0), // 1.5,2.0,2.5,3.0,3.5,4.0,4.5,5.0,5.5,6.0,6.5
+	.CLKFX_DIVIDE(2), // 1 to 32
+	.CLKFX_MULTIPLY(4), // 2 to 32
+
+	.CLKIN_DIVIDE_BY_2("FALSE"),
+	.CLKIN_PERIOD(25),
+	.CLKOUT_PHASE_SHIFT("VARIABLE"),
+	.CLK_FEEDBACK("1X"),
+	.DESKEW_ADJUST("SOURCE_SYNCHRONOUS"),
+	.DFS_FREQUENCY_MODE("LOW"),
+	.DLL_FREQUENCY_MODE("LOW"),
+	.DUTY_CYCLE_CORRECTION("TRUE"),
+	.PHASE_SHIFT(20),
+	.STARTUP_WAIT("TRUE")
+) clkgen_sample (
+	.CLK0(clk_fb_dcm),//
+	.CLK90(),
+	.CLK180(),
+	.CLK270(),
+
+	.CLK2X(),//ram_clk
+	.CLK2X180(),//ram_clk_n
+
+	.CLKDV(),
+	.CLKFX(sample_clk_dcm),
+	.CLKFX180(sample_clk_dcm_n),
+	.LOCKED(locked),
+	.CLKFB(clk_fb),//sys_clk_fb//
+	.CLKIN(in_dcm),
+	.RST(dcm_rst),
+
+	.PSEN(psen),
+	.PSINCDEC(psincdec),
+	.PSDONE(psdone),
+	.PSCLK(in_dcm)
+
+);
+
+BUFT b_sample(
+	.I(sample_clk_dcm),
+	.O(sample_clk),
+	.T(1'b0)
+);
+/*
+BUFG b_sample_n(
+	.I(sample_clk_dcm_n),
+	.O(sample_clk_n)
+);
+*/
+BUFT b_fb(
+	.I(clk_fb_dcm),
+	.O(clk_fb),
+	.T(1'b0)
+);
+
+
+BUFT b_sample_n(
+	.I(sample_clk_dcm_n),
+	.O(sample_clk_n),
+	.T(1'b0)
+
+);
+
+
+
+phase_ctl phase_ctl(
+	.clk(in_dcm),
+	.rst(sys_rst),
+	.rot(rot),
+	.locked(locked),
+	.psen(psen),
+	.psincdec(psincdec),
+	.psdone(psdone),
+	.counter(phase_counter),
+	.pulses_counter(pulses_counter)
+);
+
+
+//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+//################ test clks ##########################
+
+//reg [31:0] counter_a, counter_b;
+/*
+always @(posedge in_dcm) begin
+	if (sys_rst) 
+		counter_a <= 32'd0;
+	else if(counter_a < 100)
+		counter_a <= counter_a + 1;
+	else
+		counter_a <= counter_a;
+end
+
+always @(posedge sample_clk) begin
+	if (sys_rst) 
+		counter_b <= 32'd0;
+	else if(counter_a < 100)
+		counter_b <= counter_b + 1;
+	else
+		counter_b <= counter_b;
+end
+*/
+
+
+
+wire [1:0] clk_, stb_, we_, dqs_, dq_, di_, do_, dr_fml_, ack_;
+wire [1:0] sample_clk_;
+reg enable_sampling;
+
+
+//condicion de inicio y parada dada por stb
+always @(posedge sample_clk) begin
+	if(start_stop)
+		enable_sampling <= 1'b1;
+	else
+		enable_sampling <= 1'b0;
+end
+
+wire sample_delay;
+
+DDR_reg clock_sample (
+	.Q(sample_delay),
+	.C0(sample_clk),
+	.C1(sample_clk_n),
+	.CE(1'b1),
+	.D0(1'b1),
+	.D1(1'b0),
+	.R(1'b0),
+	.S(1'b0)
+);
+
+
+coder coder_clk(
+	.data(clk),
+	.out(clk_)
+);
+
+coder coder_clk_sample(
+	.data(sample_delay),//clk_50Mhz
+	.out(sample_clk_)
+);
+
+
+coder coder_stb(
+	.data(stb),
+	.out(stb_)
+);
+
+coder coder_we(
+	.data(we),
+	.out(we_)
+);
+
+coder coder_ack(
+	.data(ack),
+	.out(ack_)
+);
+
+coder_vector_2 coder_dqs(
+	.data(dqs),
+	.out(dqs_)
+);
+
+
+coder_vector coder_dq(
+	.data(dq),
+	.out(dq_)
+);
+
+coder_vector_32 coder_di(
+	.data(di),
+	.out(di_)
+);
+
+coder_vector_32 coder_do(
+	.data(do),
+	.out(do_)
+);
+
+coder_vector_32 coder_dr_fml(
+	.data(dr_fml),
+	.out(dr_fml_)
+);
+
+reg mem_we;
+reg [mem_width-1:0] mem_adr_w, mem_adr_r;
+reg [data_size-1:0] buf_graph;
+
+
+wire [mem_width-1:0] mem_adr;
+
+
+wire [10:0] x;
+wire [9:0] y;
+
+wire [data_size-1:0] mem_dat_w, mem_dat_r, mem_dat_r_p, mem_dat_r_n;
+
+
+assign mem_dat_w = {ack_, dr_fml_, sample_clk_, clk_, stb_, we_, dqs_, dq_, do_, di_};//stb_
+
+assign mem_adr = (mem_adr_w & {mem_width-1{mem_we}}) | (mem_adr_r & {mem_width-1{~mem_we}});
+
+
+
+always @(posedge sample_clk) begin
+	if(sys_rst) begin
+		mem_we <= 1'b0;
+		mem_adr_w <= {mem_width-1{1'b0}};
+	end else if (enable_sampling & (mem_adr_w < {mem_width-1{1'b1}})) begin
+		mem_we <= 1'b1;
+		mem_adr_w <= mem_adr_w +1;
+	end
+	else if (enable_sampling & (mem_adr_w == {mem_width-1{1'b1}})) begin
+		mem_we <= 1'b0;
+		mem_adr_w <= mem_adr_w;
+	end
+
+	else if (~enable_sampling) begin
+		mem_we <= 1'b0;
+		mem_adr_w <= {mem_width-1{1'b0}}; 
+	end
+end
+
+reg [10:0] counter;
+reg inc_addr_r;
+wire half_period;
+reg h_p_delay_1, h_p_delay_2;
+
+// counter for increment address on reads
+always @(posedge sample_clk) begin
+	if (sys_rst | (x == 11'd0) | (x > 11'd1280)) begin
+		counter <= {11{1'b0}};
+		inc_addr_r <= 1'b0;
+	end else if(counter > 1280/samples) begin
+		counter <= {11{1'b0}};
+		inc_addr_r <= 1'b1;		
+	end else begin
+		counter <= counter+11'd1;
+		inc_addr_r <= 1'b0;	end
+end
+
+
+
+assign half_period = counter <= 1280/samples/2;
+
+always @(posedge sample_clk) begin
+	if(sys_rst) begin// | (x == 0)
+		h_p_delay_1 <=1'b0;
+		h_p_delay_2 <=1'b0;
+	end
+	else begin
+		h_p_delay_1 <= half_period;
+		h_p_delay_2 <= h_p_delay_1;
+	end
+end
+
+
+
+always @(posedge sample_clk) begin
+	if(sys_rst | (x == 11'd0) | (x > 11'd1280))
+		mem_adr_r <= {mem_width-1{1'b0}};
+	else if(inc_addr_r & (mem_adr_r < {mem_width-1{1'b1}}))
+		mem_adr_r <= mem_adr_r + 1'b1;
+	else if(inc_addr_r & (mem_adr_r == {mem_width-1{1'b1}}))
+		mem_adr_r <= mem_adr_r ;
+end
+
+
+
+
+
+
+
+//always @(posedge clkin) begin
+//state = {1'b1,1'b0,1'b1,1'b0,1'b1,1'b1,1'b0};
+//end 
+
+vga_controller vga_cnt(
+	.clk(clk_50Mhz), 
+	.rst(sys_rst),
+	.hsync(vga_hsync),
+	.vsync(vga_vsync),
+	.x(x),
+	.y(y)
+);
+
+graph #(
+	.samples(samples),
+	.data_width(data_size),
+	.height(10)
+) graph (
+	.clk(clk_50Mhz),//sample_clk
+	.rst(sys_rst),
+	.x(x),
+	.y(y),
+	.state(mem_dat_r),
+	.buf_data(buf_graph),
+	.rgb_out(rgb)
+);
+
+memory#(
+	// memoria
+	.width(mem_width),
+	.mem_size(32)
+) buffer_posedge(
+	.clk(sample_clk),
+	.mem_dat_i(mem_dat_w),
+	.mem_dat_o(mem_dat_r_p),
+	.mem_we(mem_we),
+	.mem_adr(mem_adr)
+);
+
+
+memory#(
+	// memoria
+	.width(mem_width),
+	.mem_size(32)
+) buffer_negedge(
+	.clk(sample_clk_n),
+	.mem_dat_i(mem_dat_w),
+	.mem_dat_o(mem_dat_r_n),
+	.mem_we(mem_we),
+	.mem_adr(mem_adr)
+);
+
+/*
+DDR_buf #(
+	.size(data_size)
+)
+DDr_buffer
+(
+	.D0(mem_dat_r_p),
+	.D1(mem_dat_r_n),
+	.C0(h_p_delay_2 ),
+	.C1(~h_p_delay_2 ),
+	.CE(1'b1),
+	.R(sys_rst),
+	.S(1'b0),
+	.Q(mem_dat_r)
+);
+*/
+
+reg [data_size-1:0] mem_dat_r_n_delay;
+assign mem_dat_r = h_p_delay_2 ? mem_dat_r_p : mem_dat_r_n_delay;
+
+
+
+always @(posedge sample_clk) begin
+	mem_dat_r_n_delay <= mem_dat_r_n;
+	if(sys_rst)
+		buf_graph <= 14'b0;
+	else 
+		buf_graph <= mem_dat_r;
+end
+
+
+
+
+endmodule
+
+

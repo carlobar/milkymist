@@ -58,7 +58,7 @@
 
 
 `ifndef SIMULATION_DDR
-	`define CFG_DCACHE_ENABLED
+	//`define CFG_DCACHE_ENABLED
 `else
 `endif
 

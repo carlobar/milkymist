@@ -1,0 +1,44 @@
+`timescale 1ns / 1ps
+
+`include "setup.v"
+`include "system_conf.v"
+
+
+
+module tb_16_bit_interface();
+
+
+
+ initial begin
+     $dumpfile("tb_16_bit_interface.vcd");
+     $dumpvars(0,tb_16_bit_interface);
+
+     # 300000 $finish;
+  end
+
+reg	clkin;
+reg     resetin;
+
+initial clkin = 1'b0;
+always #10 clkin = ~clkin;
+
+initial begin
+	resetin = 1'b1;
+	#400 resetin = 1'b0;  
+end
+
+
+soc soc(
+	.clkin(clkin),
+	.resetin(resetin)
+);
+
+endmodule
+
+
+
+
+
+
+		
+		

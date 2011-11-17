@@ -22,7 +22,11 @@ NET "clk_in" LOC = "C9" | IOSTANDARD = LVCMOS33 ;
 NET "clk_in" PERIOD = 20ns HIGH 50%;
 NET "clk_in" CLOCK_DEDICATED_ROUTE = FALSE;
 #PIN "sampling/clkgen_sample.CLK0" CLOCK_DEDICATED_ROUTE = FALSE;
-PIN "ddram/clkgen_dqs.CLK0" CLOCK_DEDICATED_ROUTE = FALSE; 
+
+
+###PIN "ddram/clkgen_dqs.CLK0" CLOCK_DEDICATED_ROUTE = FALSE; 
+
+
 PIN "clkgen_sys.CLK0" CLOCK_DEDICATED_ROUTE = FALSE;
 
 
@@ -138,8 +142,8 @@ NET "sw<3>" LOC = "N17" | IOSTANDARD = LVTTL | PULLUP ;
 NET "uart_rx"  LOC = "U8" |  IOSTANDARD = LVTTL;
 NET "uart_tx"  LOC = "M13" | IOSTANDARD = LVTTL | DRIVE = 8 | SLEW = SLOW ;
 
-#NET "uart_rx_mon"  LOC = "R7" |  IOSTANDARD = LVTTL ;
-#NET "uart_tx_mon"  LOC = "M14" | IOSTANDARD = LVTTL | DRIVE = 8 | SLEW = SLOW ;
+#NET "uart_rx"  LOC = "R7" |  IOSTANDARD = LVTTL ;
+#NET "uart_tx"  LOC = "M14" | IOSTANDARD = LVTTL | DRIVE = 8 | SLEW = SLOW ;
 
 
 
@@ -250,7 +254,7 @@ Net phy_rx_data(0) LOC=V8 | IOSTANDARD = LVCMOS33;
 Net phy_rx_data(1) LOC=T11 | IOSTANDARD = LVCMOS33;
 Net phy_rx_data(2) LOC=U11 | IOSTANDARD = LVCMOS33;
 Net phy_rx_data(3) LOC=V14 | IOSTANDARD = LVCMOS33;
-#Net errxd(4) LOC=U14 | IOSTANDARD = LVCMOS33;
+Net phy_rx_er LOC=U14 | IOSTANDARD = LVCMOS33;
 
 Net phy_tx_en LOC=P15 | IOSTANDARD = LVCMOS33;
 
@@ -263,7 +267,7 @@ Net phy_tx_data(0) LOC=R11 | IOSTANDARD = LVCMOS33;
 Net phy_tx_data(1) LOC=T15 | IOSTANDARD = LVCMOS33;
 Net phy_tx_data(2) LOC=R5 | IOSTANDARD = LVCMOS33;
 Net phy_tx_data(3) LOC=T5 | IOSTANDARD = LVCMOS33;
-#Net etxd(4) LOC=R6 | IOSTANDARD = LVCMOS33;
+Net phy_tx_er LOC=R6 | IOSTANDARD = LVCMOS33;
 
 #--- managemet clock
 Net phy_mii_clk LOC=P9 | IOSTANDARD = LVCMOS33;

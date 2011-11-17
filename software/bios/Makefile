@@ -1,11 +1,13 @@
 MMDIR=../..
 include $(MMDIR)/software/include.mak
 
-OBJECTS=crt0.o isr.o main.o unlzma.o boot.o boot-helper.o
+APP=app_a.bin app_b.bin
+#OBJ=app_a.o app_b.o $OBJ)
+OBJECTS=crt0.o  isr.o main.o unlzma.o boot.o boot-helper.o
 SEGMENTS=-j .text -j .data -j .rodata
 FILE1=app.c
 
-all: bios.bin bios-rescue.bin
+all: bios.bin 
 
 %.bin: %.elf
 	$(MAKE) -C $(MMDIR)/tools
@@ -22,6 +24,13 @@ bios-rescue.elf: linker-rescue.ld $(OBJECTS)
 	lm32-rtems4.11-objdump -S $@  > $@.dis
 	chmod -x $@
 
+#$(OBJ):
+#	make -C ../app
+#	cp ../app/app_a.bin .
+#	cp ../app/app_b.bin .
+#	$(LD) -r -b binary -o app_a.o app_a.bin 
+#	$(LD) -r -b binary -o app_b.o app_b.bin
+
 
 
 .PHONY: clean depend
@@ -30,7 +39,7 @@ depend:
 	makedepend -Y -- $(CFLAGS) -- *.c
 
 clean:
-	rm -f *.o bios.elf bios.bin bios-rescue.elf bios-rescue.bin .*~ *~ Makefile.bak
+	rm -f *.o bios.elf bios.bin bios-rescue.elf bios-rescue.bin .*~ *~ Makefile.bak *.bin 
 
 # DO NOT DELETE
 

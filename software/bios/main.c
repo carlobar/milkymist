@@ -462,6 +462,10 @@ static void do_command(char *c)
 
 	else if(strcmp(token, "help") == 0) help();
 
+	else if(strcmp(token, "print_lcd") == 0) print_lcd();
+	//else if(strcmp(token, "app_a") == 0) copy_app_a();
+	//else if(strcmp(token, "app_b") == 0) copy_app_b();
+
 	else if(strcmp(token, "rcsr") == 0) rcsr(get_token(&c));
 	else if(strcmp(token, "wcsr") == 0) wcsr(get_token(&c), get_token(&c));
 
@@ -625,3 +629,4 @@ int main(int i, char **c)
 	}
 	return 0;
 }
+

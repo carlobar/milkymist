@@ -2,6 +2,7 @@
 
 source setup.inc
 BASEDIR=`pwd`
+SYNTOOL=xst
 LOGFILEHOST=$BASEDIR/tools.log
 LOGFILE=$BASEDIR/synthesis.log
 export  XIL_PLACE_ALLOW_LOCAL_BUFG_ROUTING=1

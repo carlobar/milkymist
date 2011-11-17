@@ -1,9 +1,11 @@
 OUTPUT_FORMAT("elf32-lm32")
+ENTRY(_start)
 
 __DYNAMIC = 0;
 
 MEMORY {
-	flash : ORIGIN = 0x41000000, LENGTH = 0xf00000    /* 128K */
+	flash : ORIGIN = 0x40000000, LENGTH = 0x20000    
+	sdram : ORIGIN = 0x40100000, LENGTH = 0xa00000    
 }
 
 SECTIONS
@@ -34,7 +36,7 @@ SECTIONS
 		_gp = ALIGN(16);
 		*(.sdata .sdata.* .gnu.linkonce.s.*)
 		_edata = .;
-	} > flash
+	} > sdram
 
 	.bss :
 	{
@@ -49,7 +51,7 @@ SECTIONS
 		. = ALIGN(4);
 		_ebss = .;
 		_end = .;
-	} > flash
+	} > sdram
 }
 
 PROVIDE(_fstack = ORIGIN(sdram) + LENGTH(sdram) - 4);
